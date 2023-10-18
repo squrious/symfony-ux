@@ -14,6 +14,7 @@ namespace Symfony\UX\LiveComponent\Metadata;
 use Symfony\Component\PropertyInfo\PropertyTypeExtractorInterface;
 use Symfony\Component\PropertyInfo\Type;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
+use Symfony\UX\LiveComponent\Util\LiveUrl;
 use Symfony\UX\TwigComponent\ComponentFactory;
 
 /**
@@ -51,7 +52,7 @@ class LiveComponentMetadataFactory
         $metadatas = [];
 
         foreach (self::propertiesFor($class) as $property) {
-            if (!$attribute = $property->getAttributes(LiveProp::class)[0] ?? null) {
+            if (!$attribute = $property->getAttributes(LiveProp::class)[0] ?? $property->getAttributes(LiveUrl::class)[0] ?? null) {
                 continue;
             }
 
@@ -87,24 +88,24 @@ class LiveComponentMetadataFactory
 
         if (null === $type && null === $collectionValueType && isset($infoTypes[0])) {
             $infoType = Type::BUILTIN_TYPE_OBJECT === $infoTypes[0]->getBuiltinType() ? $infoTypes[0]->getClassName() : $infoTypes[0]->getBuiltinType();
-
-            return new LivePropMetadata(
-                $property->getName(),
-                $liveProp,
-                $infoType,
-                null === $infoTypes[0]->getClassName(),
-                $infoTypes[0]->isNullable(),
-                null,
-            );
+            $isTypeBuiltIn = null === $infoTypes[0]->getClassName();
+            $isTypeNullable = $infoTypes[0]->isNullable();
+        } else {
+            $infoType = $type?->getName();
+            $isTypeBuiltIn = $type?->isBuiltin() ?? false;
+            $isTypeNullable = $type?->allowsNull() ?? true;
         }
+
+        $queryStringBinding = $this->createQueryStringMapping($propertyName, $liveProp, $isTypeBuiltIn, $infoType);
 
         return new LivePropMetadata(
             $property->getName(),
             $liveProp,
-            $type?->getName(),
-            $type && $type->isBuiltin(),
-            !$type || $type->allowsNull(),
+            $infoType,
+            $isTypeBuiltIn,
+            $isTypeNullable,
             $collectionValueType,
+            $queryStringBinding
         );
     }
 
@@ -120,5 +121,62 @@ class LiveComponentMetadataFactory
         if ($parent = $class->getParentClass()) {
             yield from self::propertiesFor($parent);
         }
+    }
+
+    private function createQueryStringMapping(string $propertyName, LiveProp $liveProp, bool $isTypeBuiltIn, ?string $infoType): array
+    {
+        if (null === ($url = $liveProp->url())) {
+            return [];
+        }
+        $queryStringBinding = [];
+        $parameters = [];
+        if (!$isTypeBuiltIn && null !== $infoType) {
+            $aliases = $url->getAlias();
+            if (!\is_array($aliases)) {
+                $aliases = $liveProp->writablePaths();
+            }
+
+            if (empty($aliases)) {
+                throw new \LogicException('Alias must be a property mapping if an object.');
+            }
+
+            foreach ($aliases as $param => $subProp) {
+                $subPropTypes = $this->propertyTypeExtractor->getTypes($infoType, $subProp) ?? [];
+                foreach ($subPropTypes as $subPropType) {
+                    if ($subPropType->isCollection()) {
+                        throw new \LogicException('Cannot use collections in query string mapping');
+                    }
+                }
+                $subPropType = $subPropTypes[0] ?? null;
+
+                if (Type::BUILTIN_TYPE_OBJECT === $subPropType?->getBuiltinType()) {
+                    throw new \InvalidArgumentException('Only scalar values are supported for nested properties in query string mapping');
+                }
+
+                if (!\is_string($param)) {
+                    // Not an alias mapping, build the default parameter name
+                    $param = sprintf('%s_%s', $propertyName, $subProp);
+                }
+
+                $parameters[$param] = [
+                    'property' => sprintf('%s.%s', $propertyName, $subProp),
+                    'type' => $subPropType?->getBuiltinType() ?? 'string',
+                ];
+
+            }
+        } else {
+            $alias = $url->getAlias();
+            if (null !== $alias && !\is_string($alias)) {
+                throw new \LogicException('Alias must be a string when using URL binding on a scalar property');
+            }
+            $parameters[$alias ?? $propertyName] = [
+                'type' => $infoType ?? 'string',
+            ];
+        }
+
+        $queryStringBinding['parameters'] = $parameters;
+
+        return $queryStringBinding;
+
     }
 }

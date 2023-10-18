@@ -11,6 +11,8 @@
 
 namespace Symfony\UX\LiveComponent\Attribute;
 
+use Symfony\UX\LiveComponent\Util\LiveUrl;
+
 /**
  * @experimental
  */
@@ -58,6 +60,8 @@ final class LiveProp
      */
     private null|string|array $onUpdated;
 
+    private LiveUrl|null $url;
+
     /**
      * @param bool|array  $writable                  If true, this property can be changed by the frontend.
      *                                               Or set to an array of paths within this object/array
@@ -84,6 +88,7 @@ final class LiveProp
         string $format = null,
         bool $updateFromParent = false,
         string|array $onUpdated = null,
+        bool|LiveUrl $url = false,
     ) {
         $this->writable = $writable;
         $this->hydrateWith = $hydrateWith;
@@ -94,6 +99,15 @@ final class LiveProp
         $this->format = $format;
         $this->acceptUpdatesFromParent = $updateFromParent;
         $this->onUpdated = $onUpdated;
+
+        if ($url) {
+            if (true === $url) {
+                $url = new LiveUrl();
+            }
+            $this->url = $url;
+        } else {
+            $this->url = null;
+        }
 
         if ($this->useSerializerForHydration && ($this->hydrateWith || $this->dehydrateWith)) {
             throw new \InvalidArgumentException('Cannot use useSerializerForHydration with hydrateWith or dehydrateWith.');
@@ -187,5 +201,10 @@ final class LiveProp
     public function onUpdated(): null|string|array
     {
         return $this->onUpdated;
+    }
+
+    public function url(): ?LiveUrl
+    {
+        return $this->url;
     }
 }
