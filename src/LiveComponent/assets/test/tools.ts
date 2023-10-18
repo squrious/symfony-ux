@@ -434,6 +434,7 @@ export function initComponent(props: any = {}, controllerValues: any = {}) {
         ${controllerValues.fingerprint ? `data-live-fingerprint-value="${controllerValues.fingerprint}"` : ''}
         ${controllerValues.listeners ? `data-live-listeners-value="${dataToJsonAttribute(controllerValues.listeners)}"` : ''}
         ${controllerValues.browserDispatch ? `data-live-browser-dispatch="${dataToJsonAttribute(controllerValues.browserDispatch)}"` : ''}
+        ${controllerValues.queryMapping ? `data-live-query-mapping="${dataToJsonAttribute(controllerValues.queryMapping)}"` : ''}
     `;
 }
 

@@ -87,24 +87,24 @@ class LiveComponentMetadataFactory
 
         if (null === $type && null === $collectionValueType && isset($infoTypes[0])) {
             $infoType = Type::BUILTIN_TYPE_OBJECT === $infoTypes[0]->getBuiltinType() ? $infoTypes[0]->getClassName() : $infoTypes[0]->getBuiltinType();
-
-            return new LivePropMetadata(
-                $property->getName(),
-                $liveProp,
-                $infoType,
-                null === $infoTypes[0]->getClassName(),
-                $infoTypes[0]->isNullable(),
-                null,
-            );
+            $isTypeBuiltIn = null === $infoTypes[0]->getClassName();
+            $isTypeNullable = $infoTypes[0]->isNullable();
+        } else {
+            $infoType = $type?->getName();
+            $isTypeBuiltIn = $type?->isBuiltin() ?? false;
+            $isTypeNullable = $type?->allowsNull() ?? true;
         }
+
+        $queryStringBinding = $this->createQueryStringMapping($propertyName, $liveProp, $isTypeBuiltIn, $infoType, $collectionValueType);
 
         return new LivePropMetadata(
             $property->getName(),
             $liveProp,
-            $type?->getName(),
-            $type && $type->isBuiltin(),
-            !$type || $type->allowsNull(),
+            $infoType,
+            $isTypeBuiltIn,
+            $isTypeNullable,
             $collectionValueType,
+            $queryStringBinding
         );
     }
 
@@ -120,5 +120,56 @@ class LiveComponentMetadataFactory
         if ($parent = $class->getParentClass()) {
             yield from self::propertiesFor($parent);
         }
+    }
+
+    private function createQueryStringMapping(string $propertyName, LiveProp $liveProp, bool $isTypeBuiltIn, ?string $infoType, ?Type $collectionValueType): array
+    {
+        if (false === $liveProp->url()) {
+            return [];
+        }
+
+        $queryStringMapping = [];
+        $parameters = [];
+
+        if ($isTypeBuiltIn || null === $infoType) {
+            // Built-in or unknown type
+            $parameters[$propertyName] = [
+                'property' => $propertyName,
+                'type' => $infoType ?? 'string',
+                'collectionType' => $collectionValueType?->getBuiltinType(),
+            ];
+        } else {
+            // Custom class type
+            $subProps = $liveProp->writablePaths();
+
+            if (empty($subProps)) {
+                return [];
+            }
+
+            foreach ($subProps as $subProp) {
+                $subPropTypes = $this->propertyTypeExtractor->getTypes($infoType, $subProp) ?? [];
+                foreach ($subPropTypes as $subPropType) {
+                    if ($subPropType->isCollection()) {
+                        $collectionValueType = $subPropType->getCollectionValueTypes()[0] ?? null;
+                    }
+                }
+                $subPropType = $subPropTypes[0] ?? null;
+
+                if (Type::BUILTIN_TYPE_OBJECT === $subPropType?->getBuiltinType()) {
+                    // TODO allow deep object binding later?
+                    throw new \InvalidArgumentException(sprintf('Cannot configure URL mapping for nested property %s::%s: only scalar or arrays are supported for nested properties in query string mapping.', $infoType, $subProp));
+                }
+
+                $parameters[sprintf('%s_%s', $propertyName, $subProp)] = [
+                    'property' => sprintf('%s.%s', $propertyName, $subProp),
+                    'type' => $subPropType?->getBuiltinType() ?? 'string',
+                    'collectionType' => $collectionValueType?->getBuiltinType(),
+                ];
+            }
+        }
+
+        $queryStringMapping['parameters'] = $parameters;
+
+        return $queryStringMapping;
     }
 }

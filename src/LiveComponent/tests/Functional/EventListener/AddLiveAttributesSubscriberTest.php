@@ -133,4 +133,23 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
         $this->assertSame('todo-item-1', $lis->first()->attr('data-live-id'));
         $this->assertSame('todo-item-3', $lis->last()->attr('data-live-id'));
     }
+
+    public function testQueryStringMappingAttribute()
+    {
+        $div = $this->browser()
+            ->visit('/render-template/render_component_with_url_bound_props')
+            ->assertSuccessful()
+            ->crawler()
+            ->filter('div')
+        ;
+
+        $queryMapping = json_decode($div->attr('data-live-query-mapping'), true);
+        $expected = [
+            'prop1' => ['name' => 'prop1'],
+            'prop2' => ['name' => 'prop2'],
+            'prop3' => ['name' => 'prop3'],
+        ];
+
+        $this->assertEquals($expected, $queryMapping);
+    }
 }

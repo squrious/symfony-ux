@@ -2696,6 +2696,92 @@ class ComponentRegistry {
     }
 }
 
+class AdvancedURLSearchParams extends URLSearchParams {
+    set(name, value) {
+        if (typeof value !== 'object') {
+            super.set(name, value);
+        }
+        else {
+            this.delete(name);
+            if (Array.isArray(value)) {
+                value.forEach((v) => {
+                    this.append(`${name}[]`, v);
+                });
+            }
+            else {
+                Object.entries(value).forEach(([index, v]) => {
+                    this.append(`${name}[${index}]`, v);
+                });
+            }
+        }
+    }
+    delete(name) {
+        super.delete(name);
+        const pattern = new RegExp(`^${name}(\\[.*])?$`);
+        for (const key of Array.from(this.keys())) {
+            if (key.match(pattern)) {
+                super.delete(key);
+            }
+        }
+    }
+}
+function setQueryParam(param, value) {
+    const queryParams = new AdvancedURLSearchParams(window.location.search);
+    queryParams.set(param, value);
+    const url = urlFromQueryParams(queryParams);
+    history.replaceState(history.state, '', url);
+}
+function removeQueryParam(param) {
+    const queryParams = new AdvancedURLSearchParams(window.location.search);
+    queryParams.delete(param);
+    const url = urlFromQueryParams(queryParams);
+    history.replaceState(history.state, '', url);
+}
+function urlFromQueryParams(queryParams) {
+    let queryString = '';
+    if (Array.from(queryParams.entries()).length > 0) {
+        queryString += '?' + queryParams.toString();
+    }
+    return window.location.origin + window.location.pathname + queryString + window.location.hash;
+}
+
+class QueryStringPlugin {
+    constructor() {
+        this.mapping = new Map;
+    }
+    attachToComponent(component) {
+        this.element = component.element;
+        this.registerBindings();
+        component.on('connect', (component) => {
+            this.updateUrl(component);
+        });
+        component.on('render:finished', (component) => {
+            this.updateUrl(component);
+        });
+    }
+    registerBindings() {
+        const rawQueryMapping = this.element.dataset.liveQueryMapping;
+        if (rawQueryMapping === undefined) {
+            return;
+        }
+        const mapping = JSON.parse(rawQueryMapping);
+        Object.entries(mapping).forEach(([key, config]) => {
+            this.mapping.set(key, config);
+        });
+    }
+    updateUrl(component) {
+        this.mapping.forEach((mapping, propName) => {
+            const value = component.valueStore.get(propName);
+            if (value === '' || value === null || value === undefined) {
+                removeQueryParam(mapping.name);
+            }
+            else {
+                setQueryParam(mapping.name, value);
+            }
+        });
+    }
+}
+
 const getComponent = (element) => LiveControllerDefault.componentRegistry.getComponent(element);
 class LiveControllerDefault extends Controller {
     constructor() {
@@ -2723,6 +2809,7 @@ class LiveControllerDefault extends Controller {
             new PageUnloadingPlugin(),
             new PollingPlugin(),
             new SetValueOntoModelFieldsPlugin(),
+            new QueryStringPlugin(),
         ];
         plugins.forEach((plugin) => {
             this.component.addPlugin(plugin);

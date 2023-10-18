@@ -2,6 +2,7 @@
 
 ## 2.13.0
 
+-   Add support for URL binding in `LiveProp`
 -   Add deferred rendering of Live Components
 
 ## 2.12.0
