@@ -12,6 +12,7 @@
 namespace Symfony\UX\LiveComponent\EventListener;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
@@ -42,17 +43,19 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
     public function onPreMount(PreMountEvent $event): void
     {
         $component = $event->getComponent();
-        if (!($metadata = $this->registered[$component::class])) {
+        if (!($metadata = $this->registered[$component::class] ?? null)) {
             return;
         }
 
         $data = $event->getData();
         $request = $this->requestStack->getCurrentRequest();
+        $query = HeaderUtils::parseQuery($request->getQueryString());
+
         foreach ($metadata->getAllLivePropsMetadata() as $livePropMetadata) {
             if ([] !== ($queryStringBinding = $livePropMetadata->getQueryStringMapping())) {
                 foreach ($queryStringBinding['parameters'] as $parameterName => $binding) {
-                    if ($request->query->has($parameterName)) {
-                        $value = $request->query->get($parameterName);
+                    if (isset($query[$parameterName])) {
+                        $value = $query[$parameterName];
                         settype($value, $binding['type']);
                         $data[$binding['property']] = $value;
                     }

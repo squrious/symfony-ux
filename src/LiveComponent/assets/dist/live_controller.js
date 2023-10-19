@@ -2696,6 +2696,96 @@ class ComponentRegistry {
     }
 }
 
+class AdvancedURLSearchParams extends URLSearchParams {
+    set(name, value) {
+        if (typeof value !== 'object') {
+            super.set(name, value);
+        }
+        else {
+            this.delete(name);
+            if (Array.isArray(value)) {
+                value.forEach((v) => {
+                    this.append(`${name}[]`, v);
+                });
+            }
+            else {
+                Object.entries(value).forEach(([index, v]) => {
+                    this.append(`${name}[${index}]`, v);
+                });
+            }
+        }
+    }
+    delete(name) {
+        super.delete(name);
+        const pattern = new RegExp(`^${name}(\\[.*\\])?$`);
+        for (let key of this.keys()) {
+            if (key.match(pattern)) {
+                this.delete(key);
+            }
+        }
+    }
+}
+function setQueryParam(param, value) {
+    let queryParams = new AdvancedURLSearchParams(window.location.search);
+    queryParams.set(param, value);
+    let url = urlFromQueryParams(queryParams);
+    history.replaceState(history.state, '', url);
+}
+function removeQueryParam(param) {
+    let queryParams = new AdvancedURLSearchParams(window.location.search);
+    queryParams.delete(param);
+    let url = urlFromQueryParams(queryParams);
+    history.replaceState(history.state, '', url);
+}
+function urlFromQueryParams(queryParams) {
+    let queryString = '';
+    if (Array.from(queryParams.entries()).length > 0) {
+        queryString += '?' + queryParams.toString();
+    }
+    return window.location.origin + window.location.pathname + queryString + window.location.hash;
+}
+
+class QueryStringPluging {
+    constructor() {
+        this.mapping = new Map;
+    }
+    attachToComponent(component) {
+        this.element = component.element;
+        this.registerBindings();
+        component.on('connect', (component) => {
+            this.updateUrl(component);
+        });
+        component.on('render:finished', (component) => {
+            this.updateUrl(component);
+        });
+    }
+    registerBindings() {
+        const rawQueryMapping = this.element.dataset.liveQueryMapping;
+        if (rawQueryMapping === undefined) {
+            return;
+        }
+        const mapping = JSON.parse(rawQueryMapping);
+        const defaults = { keep: false };
+        Object.entries(mapping).forEach(([key, value]) => {
+            const config = Object.assign(Object.assign({}, defaults), { name: value });
+            this.mapping.set(key, config);
+        });
+    }
+    updateUrl(component) {
+        this.mapping.forEach((mapping, propName) => {
+            const value = component.valueStore.get(propName);
+            if (value === '' || value === null || value === undefined) {
+                mapping.keep
+                    ? setQueryParam(mapping.name, '')
+                    : removeQueryParam(mapping.name);
+            }
+            else {
+                setQueryParam(mapping.name, value);
+            }
+        });
+    }
+}
+
 const getComponent = (element) => LiveControllerDefault.componentRegistry.getComponent(element);
 class LiveControllerDefault extends Controller {
     constructor() {
@@ -2723,6 +2813,7 @@ class LiveControllerDefault extends Controller {
             new PageUnloadingPlugin(),
             new PollingPlugin(),
             new SetValueOntoModelFieldsPlugin(),
+            new QueryStringPluging()
         ];
         plugins.forEach((plugin) => {
             this.component.addPlugin(plugin);

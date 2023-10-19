@@ -18,6 +18,7 @@ import SetValueOntoModelFieldsPlugin from './Component/plugins/SetValueOntoModel
 import { PluginInterface } from './Component/plugins/PluginInterface';
 import getModelBinding from './Directive/get_model_binding';
 import ComponentRegistry from './ComponentRegistry';
+import QueryStringPluging from './Component/plugins/QueryStringPluging';
 
 export { Component };
 export const getComponent = (element: HTMLElement): Promise<Component> =>
@@ -102,6 +103,7 @@ export default class LiveControllerDefault extends Controller<HTMLElement> imple
             new PageUnloadingPlugin(),
             new PollingPlugin(),
             new SetValueOntoModelFieldsPlugin(),
+            new QueryStringPluging()
         ];
         plugins.forEach((plugin) => {
             this.component.addPlugin(plugin);
