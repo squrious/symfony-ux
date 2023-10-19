@@ -170,6 +170,7 @@ class LiveComponentMetadataFactory
                 throw new \LogicException('Alias must be a string when using URL binding on a scalar property');
             }
             $parameters[$alias ?? $propertyName] = [
+                'property' => $propertyName,
                 'type' => $infoType ?? 'string',
             ];
         }

@@ -121,6 +121,19 @@ class LiveControllerAttributesCreator
             );
         }
 
+        $liveMetadata = $this->metadataFactory->getMetadata($mounted->getName());
+        if ($liveMetadata->hasQueryStringBindings()) {
+            $queryMapping = [];
+            foreach ($liveMetadata->getAllLivePropsMetadata() as $livePropMetadata) {
+                if ($mapping = $livePropMetadata->getQueryStringMapping()) {
+                    foreach ($mapping['parameters'] as $parameter => $config) {
+                        $queryMapping[$config['property']] = $parameter;
+                    }
+                }
+            }
+            $attributesCollection->setQueryUrlMapping($queryMapping);
+        }
+
         return $attributesCollection;
     }
 

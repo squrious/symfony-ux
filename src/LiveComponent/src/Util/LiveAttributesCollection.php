@@ -97,6 +97,11 @@ final class LiveAttributesCollection
         $this->attributes['data-live-browser-dispatch'] = $browserEventsToDispatch;
     }
 
+    public function setQueryUrlMapping(array $queryUrlMapping): void
+    {
+        $this->attributes['data-live-query-mapping'] = $queryUrlMapping;
+    }
+
     private function escapeAttribute(string $value): string
     {
         return twig_escape_filter($this->twig, $value, 'html_attr');

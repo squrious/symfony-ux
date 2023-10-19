@@ -54,7 +54,7 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
                     if ($request->query->has($parameterName)) {
                         $value = $request->query->get($parameterName);
                         settype($value, $binding['type']);
-                        $data[$binding['property'] ?? $parameterName] = $value;
+                        $data[$binding['property']] = $value;
                     }
                 }
             }
