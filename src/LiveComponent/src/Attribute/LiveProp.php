@@ -60,7 +60,7 @@ final class LiveProp
      */
     private null|string|array $onUpdated;
 
-    private LiveUrl|null $url;
+    private LiveUrl|bool $url;
 
     /**
      * @param bool|array  $writable                  If true, this property can be changed by the frontend.
@@ -100,14 +100,7 @@ final class LiveProp
         $this->acceptUpdatesFromParent = $updateFromParent;
         $this->onUpdated = $onUpdated;
 
-        if ($url) {
-            if (true === $url) {
-                $url = new LiveUrl();
-            }
-            $this->url = $url;
-        } else {
-            $this->url = null;
-        }
+        $this->url = (true === $url) ? new LiveUrl() : $url;
 
         if ($this->useSerializerForHydration && ($this->hydrateWith || $this->dehydrateWith)) {
             throw new \InvalidArgumentException('Cannot use useSerializerForHydration with hydrateWith or dehydrateWith.');
@@ -203,7 +196,7 @@ final class LiveProp
         return $this->onUpdated;
     }
 
-    public function url(): ?LiveUrl
+    public function url(): LiveUrl|bool
     {
         return $this->url;
     }

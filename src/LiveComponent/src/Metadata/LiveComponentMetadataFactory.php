@@ -14,7 +14,6 @@ namespace Symfony\UX\LiveComponent\Metadata;
 use Symfony\Component\PropertyInfo\PropertyTypeExtractorInterface;
 use Symfony\Component\PropertyInfo\Type;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
-use Symfony\UX\LiveComponent\Util\LiveUrl;
 use Symfony\UX\TwigComponent\ComponentFactory;
 
 /**
@@ -52,7 +51,7 @@ class LiveComponentMetadataFactory
         $metadatas = [];
 
         foreach (self::propertiesFor($class) as $property) {
-            if (!$attribute = $property->getAttributes(LiveProp::class)[0] ?? $property->getAttributes(LiveUrl::class)[0] ?? null) {
+            if (!$attribute = $property->getAttributes(LiveProp::class)[0] ?? null) {
                 continue;
             }
 
@@ -125,59 +124,50 @@ class LiveComponentMetadataFactory
 
     private function createQueryStringMapping(string $propertyName, LiveProp $liveProp, bool $isTypeBuiltIn, ?string $infoType): array
     {
-        if (null === ($url = $liveProp->url())) {
+        if (false === $liveProp->url()) {
             return [];
         }
-        $queryStringBinding = [];
+
+        $queryStringMapping = [];
         $parameters = [];
+
         if (!$isTypeBuiltIn && null !== $infoType) {
-            $aliases = $url->getAlias();
-            if (!\is_array($aliases)) {
-                $aliases = $liveProp->writablePaths();
+            $subProps = $liveProp->writablePaths();
+
+            if (empty($subProps)) {
+                // TODO Find a way to get readable paths from DTOs
+                return [];
             }
 
-            if (empty($aliases)) {
-                throw new \LogicException('Alias must be a property mapping if an object.');
-            }
-
-            foreach ($aliases as $param => $subProp) {
+            foreach ($subProps as $subProp) {
                 $subPropTypes = $this->propertyTypeExtractor->getTypes($infoType, $subProp) ?? [];
                 foreach ($subPropTypes as $subPropType) {
                     if ($subPropType->isCollection()) {
-                        throw new \LogicException('Cannot use collections in query string mapping');
+                        // TODO support nested collections in DTOs
+                        throw new \LogicException('Cannot use collections in query string mapping for an object.');
                     }
                 }
                 $subPropType = $subPropTypes[0] ?? null;
 
                 if (Type::BUILTIN_TYPE_OBJECT === $subPropType?->getBuiltinType()) {
-                    throw new \InvalidArgumentException('Only scalar values are supported for nested properties in query string mapping');
+                    // TODO support non-scalar nested properties in DTOs
+                    throw new \InvalidArgumentException('Only scalar values are supported for nested properties in query string mapping.');
                 }
 
-                if (!\is_string($param)) {
-                    // Not an alias mapping, build the default parameter name
-                    $param = sprintf('%s_%s', $propertyName, $subProp);
-                }
-
-                $parameters[$param] = [
+                $parameters[sprintf('%s_%s', $propertyName, $subProp)] = [
                     'property' => sprintf('%s.%s', $propertyName, $subProp),
                     'type' => $subPropType?->getBuiltinType() ?? 'string',
                 ];
-
             }
         } else {
-            $alias = $url->getAlias();
-            if (null !== $alias && !\is_string($alias)) {
-                throw new \LogicException('Alias must be a string when using URL binding on a scalar property');
-            }
-            $parameters[$alias ?? $propertyName] = [
+            $parameters[$propertyName] = [
                 'property' => $propertyName,
                 'type' => $infoType ?? 'string',
             ];
         }
 
-        $queryStringBinding['parameters'] = $parameters;
+        $queryStringMapping['parameters'] = $parameters;
 
-        return $queryStringBinding;
-
+        return $queryStringMapping;
     }
 }

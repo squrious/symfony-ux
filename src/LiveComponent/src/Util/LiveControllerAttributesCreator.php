@@ -127,7 +127,12 @@ class LiveControllerAttributesCreator
             foreach ($liveMetadata->getAllLivePropsMetadata() as $livePropMetadata) {
                 if ($mapping = $livePropMetadata->getQueryStringMapping()) {
                     foreach ($mapping['parameters'] as $parameter => $config) {
-                        $queryMapping[$config['property']] = $parameter;
+                        if (isset($mapping[$config['property']])) {
+                            throw new \LogicException('Duplicate property');
+                        }
+                        $queryMapping[$config['property']] = [
+                            'name' => $parameter,
+                        ];
                     }
                 }
             }

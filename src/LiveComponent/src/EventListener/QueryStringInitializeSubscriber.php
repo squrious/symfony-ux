@@ -12,10 +12,10 @@
 namespace Symfony\UX\LiveComponent\EventListener;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
+use Symfony\UX\LiveComponent\Util\QueryStringPropsExtractor;
 use Symfony\UX\TwigComponent\Event\PreCreateForRenderEvent;
 use Symfony\UX\TwigComponent\Event\PreMountEvent;
 
@@ -29,6 +29,7 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly RequestStack $requestStack,
         private readonly LiveComponentMetadataFactory $metadataFactory,
+        private readonly QueryStringPropsExtractor $queryStringPropsExtractor,
     ) {
     }
 
@@ -48,22 +49,12 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
         }
 
         $data = $event->getData();
+
         $request = $this->requestStack->getCurrentRequest();
-        $query = HeaderUtils::parseQuery($request->getQueryString());
 
-        foreach ($metadata->getAllLivePropsMetadata() as $livePropMetadata) {
-            if ([] !== ($queryStringBinding = $livePropMetadata->getQueryStringMapping())) {
-                foreach ($queryStringBinding['parameters'] as $parameterName => $binding) {
-                    if (isset($query[$parameterName])) {
-                        $value = $query[$parameterName];
-                        settype($value, $binding['type']);
-                        $data[$binding['property']] = $value;
-                    }
-                }
-            }
-        }
+        $queryStringData = $this->queryStringPropsExtractor->extract($request->getQueryString(), $metadata);
 
-        $event->setData($data);
+        $event->setData(array_merge($data, $queryStringData));
     }
 
     public function onPreCreateForRenderEvent(PreCreateForRenderEvent $event): void

@@ -2765,9 +2765,7 @@ class QueryStringPluging {
             return;
         }
         const mapping = JSON.parse(rawQueryMapping);
-        const defaults = { keep: false };
-        Object.entries(mapping).forEach(([key, value]) => {
-            const config = Object.assign(Object.assign({}, defaults), { name: value });
+        Object.entries(mapping).forEach(([key, config]) => {
             this.mapping.set(key, config);
         });
     }
@@ -2775,9 +2773,7 @@ class QueryStringPluging {
         this.mapping.forEach((mapping, propName) => {
             const value = component.valueStore.get(propName);
             if (value === '' || value === null || value === undefined) {
-                mapping.keep
-                    ? setQueryParam(mapping.name, '')
-                    : removeQueryParam(mapping.name);
+                removeQueryParam(mapping.name);
             }
             else {
                 setQueryParam(mapping.name, value);

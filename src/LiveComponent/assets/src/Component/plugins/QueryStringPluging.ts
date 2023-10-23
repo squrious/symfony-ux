@@ -6,7 +6,6 @@ import {
 
 type QueryMapping  = {
     name: string,
-    keep: boolean,
 }
 
 export default class implements PluginInterface {
@@ -32,9 +31,7 @@ export default class implements PluginInterface {
             return;
         }
         const mapping = JSON.parse(rawQueryMapping) as Object;
-        const defaults = {keep: false} as QueryMapping;
-        Object.entries(mapping).forEach(([key, value]) => {
-            const config = {...defaults, name: value} as QueryMapping;
+        Object.entries(mapping).forEach(([key, config]) => {
             this.mapping.set(key, config);
         })
     }
@@ -43,9 +40,7 @@ export default class implements PluginInterface {
         this.mapping.forEach((mapping, propName) => {
             const value = component.valueStore.get(propName);
             if (value === '' || value === null || value === undefined) {
-                mapping.keep
-                    ? setQueryParam(mapping.name, '')
-                    : removeQueryParam(mapping.name);
+                removeQueryParam(mapping.name);
             } else {
                 setQueryParam(mapping.name, value);
             }

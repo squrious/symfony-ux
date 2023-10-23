@@ -54,7 +54,7 @@ final class LivePropMetadata
         return $this->allowsNull;
     }
 
-    public function getQueryStringMapping(): ?array
+    public function getQueryStringMapping(): array
     {
         return $this->queryStringMapping;
     }

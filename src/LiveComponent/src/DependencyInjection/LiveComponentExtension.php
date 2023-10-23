@@ -45,6 +45,7 @@ use Symfony\UX\LiveComponent\Util\ChildComponentPartialRenderer;
 use Symfony\UX\LiveComponent\Util\FingerprintCalculator;
 use Symfony\UX\LiveComponent\Util\LiveComponentStack;
 use Symfony\UX\LiveComponent\Util\LiveControllerAttributesCreator;
+use Symfony\UX\LiveComponent\Util\QueryStringPropsExtractor;
 use Symfony\UX\LiveComponent\Util\TwigAttributeHelperFactory;
 use Symfony\UX\TwigComponent\ComponentFactory;
 use Symfony\UX\TwigComponent\ComponentRenderer;
@@ -217,10 +218,13 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->addTag('container.service_subscriber', ['key' => LiveControllerAttributesCreator::class, 'id' => 'ux.live_component.live_controller_attributes_creator'])
         ;
 
+        $container->register('ux.live_component.query_string_props_extractor', QueryStringPropsExtractor::class);
+
         $container->register('ux.live_component.query_string_initializer_subscriber', QueryStringInitializeSubscriber::class)
             ->setArguments([
                 new Reference('request_stack'),
                 new Reference('ux.live_component.metadata_factory'),
+                new Reference('ux.live_component.query_string_props_extractor'),
             ])
             ->addTag('kernel.event_subscriber');
 
