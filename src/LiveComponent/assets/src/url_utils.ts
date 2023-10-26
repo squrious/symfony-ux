@@ -10,7 +10,9 @@ class AdvancedURLSearchParams extends URLSearchParams {
                 });
             } else {
                 Object.entries(value).forEach(([index, v]) => {
-                    this.append(`${name}[${index}]`, v as string);
+                    if (v !== null && v !== '' && v !== undefined) {
+                        this.append(`${name}[${index}]`, v as string);
+                    }
                 });
             }
         }

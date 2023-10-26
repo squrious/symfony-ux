@@ -55,8 +55,7 @@ final class LivePropMetadata
     }
 
     /**
-     * @return array{'parameters': array<string,array{'property': string, 'type': string, 'collectionType': string} >}
-     *
+     * @return array{'parameters': array<string,array{'property': string}>}
      */
     public function getQueryStringMapping(): array
     {

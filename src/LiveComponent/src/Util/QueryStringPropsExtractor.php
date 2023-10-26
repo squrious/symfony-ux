@@ -11,8 +11,8 @@
 
 namespace Symfony\UX\LiveComponent\Util;
 
-use Symfony\Component\HttpFoundation\HeaderUtils;
-use Symfony\Component\PropertyInfo\Type;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\UX\LiveComponent\LiveComponentHydrator;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
 
 /**
@@ -22,45 +22,30 @@ use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
  *
  * @internal
  */
-class QueryStringPropsExtractor
+final class QueryStringPropsExtractor
 {
-    public function extract(?string $queryString, LiveComponentMetadata $metadata): array
+    public function __construct(private readonly LiveComponentHydrator $hydrator)
     {
-        if (empty($queryString)) {
+    }
+
+    public function extract(Request $request, LiveComponentMetadata $metadata, object $component): array
+    {
+        $query = $request->query->all();
+
+        if (empty($query)) {
             return [];
         }
-
-        $query = HeaderUtils::parseQuery($queryString);
-
         $data = [];
 
         foreach ($metadata->getAllLivePropsMetadata() as $livePropMetadata) {
             $queryStringBinding = $livePropMetadata->getQueryStringMapping();
             foreach ($queryStringBinding['parameters'] ?? [] as $parameterName => $paramConfig) {
                 if (isset($query[$parameterName])) {
-                    $data[$paramConfig['property']] = $this->normalizeValue($query[$parameterName], $paramConfig);
+                    $data[$paramConfig['property']] = $this->hydrator->hydrateValue($query[$parameterName], $livePropMetadata, $component);
                 }
             }
         }
 
         return $data;
-    }
-
-    private function normalizeValue(mixed $value, array $config): mixed
-    {
-        $allowedTypes = [Type::BUILTIN_TYPE_BOOL, Type::BUILTIN_TYPE_FLOAT, Type::BUILTIN_TYPE_INT, Type::BUILTIN_TYPE_STRING, Type::BUILTIN_TYPE_ARRAY];
-        if (!\in_array($config['type'], $allowedTypes)) {
-            throw new \LogicException(sprintf('Invalid type "%s" for property "%s". Valid types are: %s.', $config['type'], $config['property'], implode(', ', $allowedTypes)));
-        }
-
-        if (Type::BUILTIN_TYPE_ARRAY === $config['type'] && isset($config['collectionType'])) {
-            foreach ($value as &$v) {
-                settype($v, $config['collectionType']);
-            }
-        } else {
-            settype($value, $config['type']);
-        }
-
-        return $value;
     }
 }

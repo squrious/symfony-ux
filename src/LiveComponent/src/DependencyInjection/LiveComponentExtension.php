@@ -218,7 +218,10 @@ final class LiveComponentExtension extends Extension implements PrependExtension
             ->addTag('container.service_subscriber', ['key' => LiveControllerAttributesCreator::class, 'id' => 'ux.live_component.live_controller_attributes_creator'])
         ;
 
-        $container->register('ux.live_component.query_string_props_extractor', QueryStringPropsExtractor::class);
+        $container->register('ux.live_component.query_string_props_extractor', QueryStringPropsExtractor::class)
+            ->setArguments([
+                new Reference('ux.live_component.component_hydrator'),
+            ]);
 
         $container->register('ux.live_component.query_string_initializer_subscriber', QueryStringInitializeSubscriber::class)
             ->setArguments([

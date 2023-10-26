@@ -45,7 +45,7 @@ export default class LiveControllerDefault extends Controller<HTMLElement> imple
         debounce: { type: Number, default: 150 },
         id: String,
         fingerprint: { type: String, default: '' },
-        queryMapping: { type: Object, default: {}},
+        queryMapping: { type: Object, default: {} },
     };
 
     declare readonly nameValue: string;
@@ -56,7 +56,7 @@ export default class LiveControllerDefault extends Controller<HTMLElement> imple
     declare readonly hasDebounceValue: boolean;
     declare readonly debounceValue: number;
     declare readonly fingerprintValue: string;
-    declare readonly queryMappingValue: Map<string,any>;
+    declare readonly queryMappingValue: Map<string, any>;
 
     /** The component, wrapped in the convenience Proxy */
     private proxiedComponent: Component;

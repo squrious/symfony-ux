@@ -148,6 +148,7 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
             'prop1' => ['name' => 'prop1'],
             'prop2' => ['name' => 'prop2'],
             'prop3' => ['name' => 'prop3'],
+            'prop5' => ['name' => 'prop5'],
         ];
 
         $this->assertEquals($expected, $queryMapping);

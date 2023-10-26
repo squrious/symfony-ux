@@ -2710,7 +2710,9 @@ class AdvancedURLSearchParams extends URLSearchParams {
             }
             else {
                 Object.entries(value).forEach(([index, v]) => {
-                    this.append(`${name}[${index}]`, v);
+                    if (v !== null && v !== '' && v !== undefined) {
+                        this.append(`${name}[${index}]`, v);
+                    }
                 });
             }
         }
@@ -2748,25 +2750,63 @@ function urlFromQueryParams(queryParams) {
 class QueryStringPlugin {
     constructor(mapping) {
         this.mapping = new Map;
+        this.initialPropsValues = new Map;
+        this.changedProps = {};
         Object.entries(mapping).forEach(([key, config]) => {
             this.mapping.set(key, config);
         });
     }
     attachToComponent(component) {
+        component.on('connect', (component) => {
+            for (const model of this.mapping.keys()) {
+                for (const prop of this.getNormalizedPropNames(component.valueStore.get(model), model)) {
+                    this.initialPropsValues.set(prop, component.valueStore.get(prop));
+                }
+            }
+        });
         component.on('render:finished', (component) => {
-            this.updateUrl(component);
+            this.initialPropsValues.forEach((initialValue, prop) => {
+                var _a;
+                const value = component.valueStore.get(prop);
+                (_a = this.changedProps)[prop] || (_a[prop] = JSON.stringify(value) !== JSON.stringify(initialValue));
+                if (this.changedProps) {
+                    this.updateUrlParam(prop, value);
+                }
+            });
         });
     }
-    updateUrl(component) {
-        this.mapping.forEach((mapping, propName) => {
-            const value = component.valueStore.get(propName);
-            if (value === '' || value === null || value === undefined) {
-                removeQueryParam(mapping.name);
+    updateUrlParam(model, value) {
+        const paramName = this.getParamFromModel(model);
+        if (paramName === undefined) {
+            return;
+        }
+        this.isValueEmpty(value)
+            ? removeQueryParam(paramName)
+            : setQueryParam(paramName, value);
+    }
+    getParamFromModel(model) {
+        const modelParts = model.split('.');
+        const rootPropMapping = this.mapping.get(modelParts[0]);
+        if (rootPropMapping === undefined) {
+            return undefined;
+        }
+        return rootPropMapping.name + modelParts.slice(1).map((v) => `[${v}]`).join('');
+    }
+    *getNormalizedPropNames(value, propertyPath) {
+        if (this.isObjectValue(value)) {
+            for (const key in value) {
+                yield* this.getNormalizedPropNames(value[key], `${propertyPath}.${key}`);
             }
-            else {
-                setQueryParam(mapping.name, value);
-            }
-        });
+        }
+        else {
+            yield propertyPath;
+        }
+    }
+    isValueEmpty(value) {
+        return (value === '' || value === null || value === undefined);
+    }
+    isObjectValue(value) {
+        return !(Array.isArray(value) || value === null || typeof value !== 'object');
     }
 }
 

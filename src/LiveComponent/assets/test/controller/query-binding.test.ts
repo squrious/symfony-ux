@@ -9,12 +9,13 @@
 
 'use strict';
 
-import {createTest, initComponent, shutdownTests} from '../tools';
+import {createTest, initComponent, shutdownTests, setCurrentSearch, expectCurrentSearch} from '../tools';
 import { getByText, waitFor } from '@testing-library/dom';
 
 describe('LiveController query string binding', () => {
     afterEach(() => {
         shutdownTests();
+        setCurrentSearch('');
     });
 
     it('doesn\'t initialize URL if props are not defined', async () => {
@@ -22,36 +23,127 @@ describe('LiveController query string binding', () => {
             <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
         `)
 
-        expect(window.location.search).toEqual('');
+        expectCurrentSearch().toEqual('');
     })
 
-    it('initializes URL with defined props values', async () => {
+    it('doesn\'t initialize URL with defined props values', async () => {
         await createTest({ prop: 'foo'}, (data: any) => `
             <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
         `)
 
-        expect(window.location.search).toEqual('?prop=foo');
+        expectCurrentSearch().toEqual('');
     });
 
-    it('properly handles array props in the URL', async () => {
-        await createTest({ prop: ['foo', 'bar']}, (data: any) => `
-            <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
-        `)
-        expect(decodeURIComponent(window.location.search)).toEqual('?prop[]=foo&prop[]=bar');
-    });
-
-    it('updates the URL when the props changed', async () => {
-        const test = await createTest({ prop: ''}, (data: any) => `
-            <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
+    it('updates basic props in the URL', async () => {
+        const test = await createTest({ prop1: '', prop2: null}, (data: any) => `
+            <div ${initComponent(data, { queryMapping: {prop1: {name: 'prop1'}, prop2: {name: 'prop2'}}})}></div>
         `)
 
+        // String
+
+        // Set value
         test.expectsAjaxCall()
-            .expectUpdatedData({prop: 'foo'});
+            .expectUpdatedData({prop1: 'foo'});
 
-        await test.component.set('prop', 'foo', true);
+        await test.component.set('prop1', 'foo', true);
 
-        expect(window.location.search).toEqual('?prop=foo');
+        expectCurrentSearch().toEqual('?prop1=foo');
+
+        // Remove value
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop1: ''});
+
+        await test.component.set('prop1', '', true);
+
+        expectCurrentSearch().toEqual('');
+
+        // Number
+
+        // Set value
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop2: 42});
+
+        await test.component.set('prop2', 42, true);
+
+        expectCurrentSearch().toEqual('?prop2=42');
+
+        // Remove value
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop2: null});
+
+        await test.component.set('prop2', null, true);
+
+        expectCurrentSearch().toEqual('');
     });
+
+    it('updates array props in the URL', async () => {
+        const test = await createTest({ prop: []}, (data: any) => `
+            <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
+        `)
+
+        // Set value
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop: ['foo', 'bar']});
+
+        await test.component.set('prop', ['foo', 'bar'], true);
+
+        expectCurrentSearch().toEqual('?prop[]=foo&prop[]=bar');
+
+        // Remove one value
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop: ['foo']});
+
+        await test.component.set('prop', ['foo'], true);
+
+        expectCurrentSearch().toEqual('?prop[]=foo');
+
+        // Remove all remaining values
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop: []});
+
+        await test.component.set('prop', [], true);
+
+        expectCurrentSearch().toEqual('');
+    });
+
+    it('updates objects in the URL', async () => {
+        const test = await createTest({ prop: { 'foo': null, 'bar': null, 'baz': null}}, (data: any) => `
+            <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
+        `)
+
+        // Set single nested prop
+        test.expectsAjaxCall()
+            .expectUpdatedData({'prop.foo': 'dummy' });
+
+        await test.component.set('prop.foo', 'dummy', true);
+
+        expectCurrentSearch().toEqual('?prop[foo]=dummy');
+
+        // Set multiple values
+        test.expectsAjaxCall()
+            .expectUpdatedData({'prop': { 'foo': 'other', 'bar': 42 } });
+
+        await test.component.set('prop', { 'foo': 'other', 'bar': 42 }, true);
+
+        expectCurrentSearch().toEqual('?prop[foo]=other&prop[bar]=42');
+
+        // Remove one value
+        test.expectsAjaxCall()
+            .expectUpdatedData({'prop': { 'foo': 'other', 'bar': null } });
+
+        await test.component.set('prop', { 'foo': 'other', 'bar': null }, true);
+
+        expectCurrentSearch().toEqual('?prop[foo]=other');
+
+        // Remove all values
+        test.expectsAjaxCall()
+            .expectUpdatedData({'prop': { 'foo': null, 'bar': null } });
+
+        await test.component.set('prop', { 'foo': null, 'bar': null }, true);
+
+        expectCurrentSearch().toEqual('');
+    });
+
 
     it('updates the URL with props changed by the server', async () => {
         const test = await createTest({ prop: ''}, (data: any) => `
@@ -71,6 +163,6 @@ describe('LiveController query string binding', () => {
 
         await waitFor(() => expect(test.element).toHaveTextContent('Prop: foo'));
 
-        expect(window.location.search).toEqual('?prop=foo');
+        expectCurrentSearch().toEqual('?prop=foo');
     });
 })

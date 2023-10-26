@@ -10,15 +10,8 @@
 'use strict';
 
 import {setQueryParam, removeQueryParam} from '../src/url_utils';
+import { expectCurrentSearch, setCurrentSearch } from './tools';
 
-const setCurrentSearch = (search: string): void =>
-{
-    history.replaceState(history.state, '', window.location.origin + window.location.pathname + search);
-}
-
-const expectCurrentSearch = () => {
-    return expect(decodeURIComponent(window.location.search));
-}
 
 describe('setQueryParam', () => {
     it('set the param if it does not exist', () => {

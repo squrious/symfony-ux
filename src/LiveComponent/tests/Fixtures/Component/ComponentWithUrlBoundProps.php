@@ -5,6 +5,7 @@ namespace Symfony\UX\LiveComponent\Tests\Fixtures\Component;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
 use Symfony\UX\LiveComponent\DefaultActionTrait;
+use Symfony\UX\LiveComponent\Tests\Fixtures\Dto\Address;
 
 #[AsLiveComponent('component_with_url_bound_props')]
 class ComponentWithUrlBoundProps
@@ -21,6 +22,8 @@ class ComponentWithUrlBoundProps
     #[LiveProp(writable: true)]
     public ?string $prop4 = null;
 
+    #[LiveProp(writable: ['address', 'city'], url: true)]
+    public ?Address $prop5 = null;
 
     use DefaultActionTrait;
 }

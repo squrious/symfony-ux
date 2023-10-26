@@ -57,9 +57,9 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
 
         $data = $event->getData();
 
-        $request = $this->requestStack->getCurrentRequest();
+        $request = $this->requestStack->getMainRequest();
 
-        $queryStringData = $this->queryStringPropsExtractor->extract($request->getQueryString(), $metadata);
+        $queryStringData = $this->queryStringPropsExtractor->extract($request, $metadata, $component);
 
         $event->setData(array_merge($data, $queryStringData));
     }

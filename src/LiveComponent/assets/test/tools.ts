@@ -451,3 +451,11 @@ export function getComponent(element: HTMLElement|null) {
 
     return component;
 }
+
+export function setCurrentSearch(search: string){
+    history.replaceState(history.state, '', window.location.origin + window.location.pathname + search);
+}
+
+export function expectCurrentSearch (){
+    return expect(decodeURIComponent(window.location.search));
+}

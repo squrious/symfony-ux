@@ -410,7 +410,7 @@ final class LiveComponentHydrator
         return $dehydratedObjectValues;
     }
 
-    private function hydrateValue(mixed $value, LivePropMetadata $propMetadata, object $parentObject): mixed
+    public function hydrateValue(mixed $value, LivePropMetadata $propMetadata, object $parentObject): mixed
     {
         if ($propMetadata->hydrateMethod()) {
             if (!method_exists($parentObject, $propMetadata->hydrateMethod())) {
