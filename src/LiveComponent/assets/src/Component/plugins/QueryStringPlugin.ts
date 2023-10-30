@@ -18,10 +18,6 @@ export default class implements PluginInterface {
     }
 
     attachToComponent(component: Component): void {
-        component.on('connect', (component: Component) => {
-            this.updateUrl(component);
-        });
-
         component.on('render:finished', (component: Component)=> {
             this.updateUrl(component);
         });

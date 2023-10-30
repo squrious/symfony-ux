@@ -2753,9 +2753,6 @@ class QueryStringPlugin {
         });
     }
     attachToComponent(component) {
-        component.on('connect', (component) => {
-            this.updateUrl(component);
-        });
         component.on('render:finished', (component) => {
             this.updateUrl(component);
         });
