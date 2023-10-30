@@ -54,6 +54,10 @@ final class LivePropMetadata
         return $this->allowsNull;
     }
 
+    /**
+     * @return array{'parameters': array<string,array{'property': string, 'type': string, 'collectionType': string} >}
+     *
+     */
     public function getQueryStringMapping(): array
     {
         return $this->queryStringMapping;

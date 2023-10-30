@@ -2746,27 +2746,18 @@ function urlFromQueryParams(queryParams) {
 }
 
 class QueryStringPlugin {
-    constructor() {
+    constructor(mapping) {
         this.mapping = new Map;
+        Object.entries(mapping).forEach(([key, config]) => {
+            this.mapping.set(key, config);
+        });
     }
     attachToComponent(component) {
-        this.element = component.element;
-        this.registerBindings();
         component.on('connect', (component) => {
             this.updateUrl(component);
         });
         component.on('render:finished', (component) => {
             this.updateUrl(component);
-        });
-    }
-    registerBindings() {
-        const rawQueryMapping = this.element.dataset.liveQueryMapping;
-        if (rawQueryMapping === undefined) {
-            return;
-        }
-        const mapping = JSON.parse(rawQueryMapping);
-        Object.entries(mapping).forEach(([key, config]) => {
-            this.mapping.set(key, config);
         });
     }
     updateUrl(component) {
@@ -2809,7 +2800,7 @@ class LiveControllerDefault extends Controller {
             new PageUnloadingPlugin(),
             new PollingPlugin(),
             new SetValueOntoModelFieldsPlugin(),
-            new QueryStringPlugin(),
+            new QueryStringPlugin(this.queryMappingValue),
         ];
         plugins.forEach((plugin) => {
             this.component.addPlugin(plugin);
@@ -3030,6 +3021,7 @@ LiveControllerDefault.values = {
     debounce: { type: Number, default: 150 },
     id: String,
     fingerprint: { type: String, default: '' },
+    queryMapping: { type: Object, default: {} },
 };
 LiveControllerDefault.componentRegistry = new ComponentRegistry();
 

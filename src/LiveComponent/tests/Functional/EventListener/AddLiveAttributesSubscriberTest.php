@@ -143,7 +143,7 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
             ->filter('div')
         ;
 
-        $queryMapping = json_decode($div->attr('data-live-query-mapping'), true);
+        $queryMapping = json_decode($div->attr('data-live-query-mapping-value'), true);
         $expected = [
             'prop1' => ['name' => 'prop1'],
             'prop2' => ['name' => 'prop2'],

@@ -99,7 +99,7 @@ final class LiveAttributesCollection
 
     public function setQueryUrlMapping(array $queryUrlMapping): void
     {
-        $this->attributes['data-live-query-mapping'] = $queryUrlMapping;
+        $this->attributes['data-live-query-mapping-value'] = $queryUrlMapping;
     }
 
     private function escapeAttribute(string $value): string

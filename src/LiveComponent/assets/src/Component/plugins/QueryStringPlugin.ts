@@ -9,13 +9,15 @@ type QueryMapping  = {
 }
 
 export default class implements PluginInterface {
-    private element: Element;
     private mapping: Map<string,QueryMapping> = new Map;
 
-    attachToComponent(component: Component): void {
-        this.element = component.element;
-        this.registerBindings();
+    constructor(mapping: {[p: string]: any}) {
+        Object.entries(mapping).forEach(([key, config]) => {
+            this.mapping.set(key, config);
+        })
+    }
 
+    attachToComponent(component: Component): void {
         component.on('connect', (component: Component) => {
             this.updateUrl(component);
         });
@@ -23,19 +25,6 @@ export default class implements PluginInterface {
         component.on('render:finished', (component: Component)=> {
             this.updateUrl(component);
         });
-    }
-
-    private registerBindings(): void {
-        const rawQueryMapping = (this.element as HTMLElement).dataset.liveQueryMapping;
-        if (rawQueryMapping === undefined) {
-            return;
-        }
-
-        const mapping = JSON.parse(rawQueryMapping) as {[p: string]: QueryMapping};
-
-        Object.entries(mapping).forEach(([key, config]) => {
-            this.mapping.set(key, config);
-        })
     }
 
     private updateUrl(component: Component){
