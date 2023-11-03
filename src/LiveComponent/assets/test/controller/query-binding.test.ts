@@ -87,7 +87,7 @@ describe('LiveController query string binding', () => {
 
         await test.component.set('prop', ['foo', 'bar'], true);
 
-        expectCurrentSearch().toEqual('?prop[]=foo&prop[]=bar');
+        expectCurrentSearch().toEqual('?prop[0]=foo&prop[1]=bar');
 
         // Remove one value
         test.expectsAjaxCall()
@@ -95,7 +95,7 @@ describe('LiveController query string binding', () => {
 
         await test.component.set('prop', ['foo'], true);
 
-        expectCurrentSearch().toEqual('?prop[]=foo');
+        expectCurrentSearch().toEqual('?prop[0]=foo');
 
         // Remove all remaining values
         test.expectsAjaxCall()

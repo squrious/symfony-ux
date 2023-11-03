@@ -40,12 +40,20 @@ final class QueryStringPropsExtractor
         foreach ($metadata->getAllLivePropsMetadata() as $livePropMetadata) {
             $queryStringBinding = $livePropMetadata->getQueryStringMapping();
             foreach ($queryStringBinding['parameters'] ?? [] as $parameterName => $paramConfig) {
-                if (isset($query[$parameterName])) {
-                    $data[$paramConfig['property']] = $this->hydrator->hydrateValue($query[$parameterName], $livePropMetadata, $component);
+                if (null !== ($value = $query[$parameterName] ?? null)) {
+                    if (\is_array($value) && $this->isNumericIndexedArray($value)) {
+                        ksort($value);
+                    }
+                    $data[$paramConfig['property']] = $this->hydrator->hydrateValue($value, $livePropMetadata, $component);
                 }
             }
         }
 
         return $data;
+    }
+
+    private function isNumericIndexedArray(array $array): bool
+    {
+        return 0 === \count(array_filter(array_keys($array), 'is_string'));
     }
 }

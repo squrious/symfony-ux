@@ -2696,117 +2696,130 @@ class ComponentRegistry {
     }
 }
 
-class AdvancedURLSearchParams extends URLSearchParams {
-    set(name, value) {
-        if (typeof value !== 'object') {
-            super.set(name, value);
-        }
-        else {
-            this.delete(name);
-            if (Array.isArray(value)) {
-                value.forEach((v) => {
-                    this.append(`${name}[]`, v);
-                });
+function isObject(subject) {
+    return typeof subject === 'object' && subject !== null;
+}
+function toQueryString(data) {
+    const buildQueryStringEntries = (data, entries = {}, baseKey = '') => {
+        Object.entries(data).forEach(([iKey, iValue]) => {
+            const key = baseKey === '' ? iKey : `${baseKey}[${iKey}]`;
+            if (!isObject(iValue)) {
+                if (iValue !== null) {
+                    entries[key] = encodeURIComponent(iValue)
+                        .replace(/%20/g, '+')
+                        .replace(/%2C/g, ',');
+                }
             }
             else {
-                Object.entries(value).forEach(([index, v]) => {
-                    if (v !== null && v !== '' && v !== undefined) {
-                        this.append(`${name}[${index}]`, v);
-                    }
-                });
+                entries = Object.assign(Object.assign({}, entries), buildQueryStringEntries(iValue, entries, key));
             }
+        });
+        return entries;
+    };
+    const entries = buildQueryStringEntries(data);
+    return Object.entries(entries)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('&');
+}
+function fromQueryString(search) {
+    search = search.replace('?', '');
+    if (search === '')
+        return {};
+    const insertDotNotatedValueIntoData = (key, value, data) => {
+        const [first, second, ...rest] = key.split('.');
+        if (!second)
+            return (data[key] = value);
+        if (data[first] === undefined) {
+            data[first] = Number.isNaN(second) ? {} : [];
         }
-    }
-    delete(name) {
-        super.delete(name);
-        const pattern = new RegExp(`^${name}(\\[.*])?$`);
-        for (const key of Array.from(this.keys())) {
-            if (key.match(pattern)) {
-                super.delete(key);
-            }
+        insertDotNotatedValueIntoData([second, ...rest].join('.'), value, data[first]);
+    };
+    const entries = search.split('&').map((i) => i.split('='));
+    const data = {};
+    entries.forEach(([key, value]) => {
+        if (!value)
+            return;
+        value = decodeURIComponent(value.replace(/\+/g, '%20'));
+        if (!key.includes('[')) {
+            data[key] = value;
         }
+        else {
+            const dotNotatedKey = key.replace(/\[/g, '.').replace(/]/g, '');
+            insertDotNotatedValueIntoData(dotNotatedKey, value, data);
+        }
+    });
+    return data;
+}
+class UrlUtils extends URL {
+    has(key) {
+        const data = this.getData();
+        return Object.keys(data).includes(key);
+    }
+    set(key, value) {
+        const data = this.getData();
+        data[key] = value;
+        this.setData(data);
+    }
+    get(key) {
+        return this.getData()[key];
+    }
+    remove(key) {
+        const data = this.getData();
+        delete data[key];
+        this.setData(data);
+    }
+    getData() {
+        if (!this.search) {
+            return {};
+        }
+        return fromQueryString(this.search);
+    }
+    setData(data) {
+        this.search = toQueryString(data);
     }
 }
-function setQueryParam(param, value) {
-    const queryParams = new AdvancedURLSearchParams(window.location.search);
-    queryParams.set(param, value);
-    const url = urlFromQueryParams(queryParams);
-    history.replaceState(history.state, '', url);
-}
-function removeQueryParam(param) {
-    const queryParams = new AdvancedURLSearchParams(window.location.search);
-    queryParams.delete(param);
-    const url = urlFromQueryParams(queryParams);
-    history.replaceState(history.state, '', url);
-}
-function urlFromQueryParams(queryParams) {
-    let queryString = '';
-    if (Array.from(queryParams.entries()).length > 0) {
-        queryString += '?' + queryParams.toString();
+class HistoryStrategy {
+    static replace(url) {
+        history.replaceState(history.state, '', url);
     }
-    return window.location.origin + window.location.pathname + queryString + window.location.hash;
 }
 
+class Tracker {
+    constructor(mapping, initialValue, initiallyPresentInUrl) {
+        this.mapping = mapping;
+        this.initialValue = JSON.stringify(initialValue);
+        this.initiallyPresentInUrl = initiallyPresentInUrl;
+    }
+    hasReturnedToInitialValue(currentValue) {
+        return JSON.stringify(currentValue) === this.initialValue;
+    }
+}
 class QueryStringPlugin {
     constructor(mapping) {
-        this.mapping = new Map;
-        this.initialPropsValues = new Map;
-        this.changedProps = {};
-        Object.entries(mapping).forEach(([key, config]) => {
-            this.mapping.set(key, config);
-        });
+        this.mapping = mapping;
+        this.trackers = new Map;
     }
     attachToComponent(component) {
         component.on('connect', (component) => {
-            for (const model of this.mapping.keys()) {
-                for (const prop of this.getNormalizedPropNames(component.valueStore.get(model), model)) {
-                    this.initialPropsValues.set(prop, component.valueStore.get(prop));
-                }
-            }
-        });
-        component.on('render:finished', (component) => {
-            this.initialPropsValues.forEach((initialValue, prop) => {
-                var _a;
-                const value = component.valueStore.get(prop);
-                (_a = this.changedProps)[prop] || (_a[prop] = JSON.stringify(value) !== JSON.stringify(initialValue));
-                if (this.changedProps) {
-                    this.updateUrlParam(prop, value);
-                }
+            const urlUtils = new UrlUtils(window.location.href);
+            Object.entries(this.mapping).forEach(([prop, mapping]) => {
+                const tracker = new Tracker(mapping, component.valueStore.get(prop), urlUtils.has(prop));
+                this.trackers.set(prop, tracker);
             });
         });
-    }
-    updateUrlParam(model, value) {
-        const paramName = this.getParamFromModel(model);
-        if (paramName === undefined) {
-            return;
-        }
-        this.isValueEmpty(value)
-            ? removeQueryParam(paramName)
-            : setQueryParam(paramName, value);
-    }
-    getParamFromModel(model) {
-        const modelParts = model.split('.');
-        const rootPropMapping = this.mapping.get(modelParts[0]);
-        if (rootPropMapping === undefined) {
-            return undefined;
-        }
-        return rootPropMapping.name + modelParts.slice(1).map((v) => `[${v}]`).join('');
-    }
-    *getNormalizedPropNames(value, propertyPath) {
-        if (this.isObjectValue(value)) {
-            for (const key in value) {
-                yield* this.getNormalizedPropNames(value[key], `${propertyPath}.${key}`);
-            }
-        }
-        else {
-            yield propertyPath;
-        }
-    }
-    isValueEmpty(value) {
-        return (value === '' || value === null || value === undefined);
-    }
-    isObjectValue(value) {
-        return !(Array.isArray(value) || value === null || typeof value !== 'object');
+        component.on('render:finished', (component) => {
+            const urlUtils = new UrlUtils(window.location.href);
+            this.trackers.forEach((tracker, prop) => {
+                const value = component.valueStore.get(prop);
+                if (!tracker.initiallyPresentInUrl && tracker.hasReturnedToInitialValue(value)) {
+                    urlUtils.remove(tracker.mapping.name);
+                }
+                else {
+                    urlUtils.set(tracker.mapping.name, value);
+                }
+            });
+            HistoryStrategy.replace(urlUtils);
+        });
     }
 }
 

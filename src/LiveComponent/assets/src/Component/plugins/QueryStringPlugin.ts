@@ -1,100 +1,59 @@
 import Component from '../index';
 import { PluginInterface } from './PluginInterface';
-import {
-    setQueryParam, removeQueryParam,
-} from '../../url_utils';
+import { UrlUtils, HistoryStrategy } from '../../url_utils';
 
-type QueryMapping  = {
+interface QueryMapping {
+    /**
+     * URL parameter name
+     */
     name: string,
 }
 
-export default class implements PluginInterface {
-    private mapping = new Map<string,QueryMapping>;
-    private initialPropsValues  = new Map<string, any>;
-    private changedProps: {[p: string]: boolean} = {};
+/**
+ * Tracks initial state and prop query mapping.
+ */
+class Tracker {
+    readonly mapping: QueryMapping;
+    private readonly initialValue: any;
+    readonly initiallyPresentInUrl: boolean;
 
-    constructor(mapping: {[p: string]: any}) {
-        Object.entries(mapping).forEach(([key, config]) => {
-            this.mapping.set(key, config);
-        })
+    constructor(mapping: QueryMapping, initialValue: any, initiallyPresentInUrl: boolean) {
+        this.mapping = mapping;
+        this.initialValue = JSON.stringify(initialValue);
+        this.initiallyPresentInUrl = initiallyPresentInUrl;
+    }
+    hasReturnedToInitialValue(currentValue: any)  {
+        return JSON.stringify(currentValue) === this.initialValue;
+    }
+}
+
+export default class implements PluginInterface {
+    private trackers = new Map<string,Tracker>;
+
+    constructor(private readonly mapping: {[p: string]: QueryMapping}) {
     }
 
     attachToComponent(component: Component): void {
         component.on('connect', (component: Component) => {
-            // Store initial values of mapped props
-            for (const model of this.mapping.keys()) {
-                for (const prop of this.getNormalizedPropNames(component.valueStore.get(model), model)) {
-                    this.initialPropsValues.set(prop, component.valueStore.get(prop));
-                }
-            }
+            const urlUtils = new UrlUtils(window.location.href);
+            Object.entries(this.mapping).forEach(([prop, mapping]) => {
+                const tracker = new Tracker(mapping, component.valueStore.get(prop), urlUtils.has(prop));
+                this.trackers.set(prop, tracker);
+            });
         });
 
         component.on('render:finished', (component: Component) => {
-            this.initialPropsValues.forEach((initialValue, prop) => {
+            const urlUtils = new UrlUtils(window.location.href);
+            this.trackers.forEach((tracker, prop) => {
                 const value = component.valueStore.get(prop);
-
-                // Only update the URL if the prop has changed
-                this.changedProps[prop] ||= JSON.stringify(value) !== JSON.stringify(initialValue);
-                if (this.changedProps) {
-                    this.updateUrlParam(prop, value);
+                if (!tracker.initiallyPresentInUrl && tracker.hasReturnedToInitialValue(value)) {
+                    urlUtils.remove(tracker.mapping.name);
+                } else {
+                    urlUtils.set(tracker.mapping.name, value);
                 }
             });
+
+            HistoryStrategy.replace(urlUtils);
         });
-    }
-
-    private updateUrlParam(model: string, value: any)
-    {
-        const paramName = this.getParamFromModel(model);
-
-        if (paramName === undefined) {
-            return;
-        }
-
-        this.isValueEmpty(value)
-            ? removeQueryParam(paramName)
-            : setQueryParam(paramName, value);
-    }
-
-    /**
-     * Convert a normalized property path (foo.bar) in brace notation (foo[bar]).
-     */
-    private getParamFromModel(model: string)
-    {
-        const modelParts = model.split('.');
-        const rootPropMapping = this.mapping.get(modelParts[0]);
-
-        if (rootPropMapping === undefined) {
-            return undefined;
-        }
-
-        return rootPropMapping.name + modelParts.slice(1).map((v) => `[${v}]`).join('');
-    }
-
-    /**
-     * Get property names for the given value in the "foo.bar" format:
-     *
-     * getNormalizedPropNames({'foo': ..., 'baz': ...}, 'prop') yields 'prop.foo', 'prop.baz', etc.
-     *
-     * Non-object values will yield the propertyPath without any change.
-     */
-    private *getNormalizedPropNames(value: any, propertyPath: string): Generator<string>
-    {
-        if (this.isObjectValue(value)) {
-            for (const key in value) {
-                yield* this.getNormalizedPropNames(value[key], `${propertyPath}.${key}`)
-            }
-        } else {
-            yield propertyPath;
-        }
-    }
-
-    private isValueEmpty(value: any)
-    {
-        return (value === '' || value === null || value === undefined);
-    }
-
-    private isObjectValue(value: any): boolean
-    {
-        return !(Array.isArray(value) || value === null || typeof value !== 'object');
     }
 }
