@@ -16,7 +16,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
 use Symfony\UX\LiveComponent\Util\QueryStringPropsExtractor;
-use Symfony\UX\TwigComponent\Event\PreCreateForRenderEvent;
 use Symfony\UX\TwigComponent\Event\PreMountEvent;
 
 /**
@@ -43,17 +42,22 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            PreCreateForRenderEvent::class => 'onPreCreateForRenderEvent',
             PreMountEvent::class => 'onPreMount',
         ];
     }
 
     public function onPreMount(PreMountEvent $event): void
     {
-        $component = $event->getComponent();
-        if (!($metadata = $this->registered[$component::class] ?? null)) {
+        $metadata = new LiveComponentMetadata(
+            $event->getMetadata(),
+            $this->metadataFactory->createPropMetadatas(new \ReflectionClass($event->getComponent()::class))
+        );
+
+        if (!$metadata->hasQueryStringBindings()) {
             return;
         }
+
+        $component = $event->getComponent();
 
         $data = $event->getData();
 
@@ -62,14 +66,5 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
         $queryStringData = $this->queryStringPropsExtractor->extract($request, $metadata, $component);
 
         $event->setData(array_merge($data, $queryStringData));
-    }
-
-    public function onPreCreateForRenderEvent(PreCreateForRenderEvent $event): void
-    {
-        $componentName = $event->getName();
-        $metadata = $this->metadataFactory->getMetadata($componentName);
-        if ($metadata->hasQueryStringBindings()) {
-            $this->registered[$metadata->getComponentMetadata()->getClass()] = $metadata;
-        }
     }
 }

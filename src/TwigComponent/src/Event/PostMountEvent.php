@@ -12,6 +12,7 @@
 namespace Symfony\UX\TwigComponent\Event;
 
 use Symfony\Contracts\EventDispatcher\Event;
+use Symfony\UX\TwigComponent\ComponentMetadata;
 
 /**
  * @author Ryan Weaver <ryan@symfonycasts.com>
@@ -21,6 +22,7 @@ final class PostMountEvent extends Event
     public function __construct(
         private object $component,
         private array $data,
+        private ComponentMetadata $metadata,
         private array $extraMetadata = [],
     ) {
     }
@@ -38,6 +40,11 @@ final class PostMountEvent extends Event
     public function setData(array $data): void
     {
         $this->data = $data;
+    }
+
+    public function getMetadata(): ComponentMetadata
+    {
+        return $this->metadata;
     }
 
     public function getExtraMetadata(): array
