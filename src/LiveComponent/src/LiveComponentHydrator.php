@@ -19,6 +19,7 @@ use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
 use Symfony\Component\PropertyInfo\Type;
+use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerExceptionInterface;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
@@ -226,6 +227,55 @@ final class LiveComponentHydrator
         return $attributes;
     }
 
+    /**
+     * Hydrate a value from a dehydrated value.
+     *
+     * Depending on the prop configuration, the value may be hydrated by a custom method or the Serializer component.
+     *
+     * @throws SerializerExceptionInterface
+     */
+    public function hydrateValue(mixed $value, LivePropMetadata $propMetadata, object $parentObject): mixed
+    {
+        if ($propMetadata->hydrateMethod()) {
+            if (!method_exists($parentObject, $propMetadata->hydrateMethod())) {
+                throw new \LogicException(sprintf('The "%s" object has a hydrateMethod of "%s" but the method does not exist.', $parentObject::class, $propMetadata->hydrateMethod()));
+            }
+
+            return $parentObject->{$propMetadata->hydrateMethod()}($value);
+        }
+
+        if ($propMetadata->useSerializerForHydration()) {
+            return $this->normalizer->denormalize($value, $propMetadata->getType(), 'json', $propMetadata->serializationContext());
+        }
+
+        if ($propMetadata->collectionValueType() && Type::BUILTIN_TYPE_OBJECT === $propMetadata->collectionValueType()->getBuiltinType()) {
+            $collectionClass = $propMetadata->collectionValueType()->getClassName();
+            foreach ($value as $key => $objectItem) {
+                $value[$key] = $this->hydrateObjectValue($objectItem, $collectionClass, true, $parentObject::class, sprintf('%s.%s', $propMetadata->getName(), $key), $parentObject);
+            }
+        }
+
+        // no type? no hydration
+        if (!$propMetadata->getType()) {
+            return $value;
+        }
+
+        if (null === $value) {
+            return null;
+        }
+
+        if (\is_string($value) && $propMetadata->isBuiltIn() && \in_array($propMetadata->getType(), ['int', 'float', 'bool'], true)) {
+            return self::coerceStringValue($value, $propMetadata->getType(), $propMetadata->allowsNull());
+        }
+
+        // for all other built-ins: int, boolean, array, return as is
+        if ($propMetadata->isBuiltIn()) {
+            return $value;
+        }
+
+        return $this->hydrateObjectValue($value, $propMetadata->getType(), $propMetadata->allowsNull(), $parentObject::class, $propMetadata->getName(), $parentObject);
+    }
+
     public function addChecksumToData(array $data): array
     {
         $data[self::CHECKSUM_KEY] = $this->calculateChecksum($data);
@@ -408,48 +458,6 @@ final class LiveComponentHydrator
         }
 
         return $dehydratedObjectValues;
-    }
-
-    public function hydrateValue(mixed $value, LivePropMetadata $propMetadata, object $parentObject): mixed
-    {
-        if ($propMetadata->hydrateMethod()) {
-            if (!method_exists($parentObject, $propMetadata->hydrateMethod())) {
-                throw new \LogicException(sprintf('The "%s" object has a hydrateMethod of "%s" but the method does not exist.', $parentObject::class, $propMetadata->hydrateMethod()));
-            }
-
-            return $parentObject->{$propMetadata->hydrateMethod()}($value);
-        }
-
-        if ($propMetadata->useSerializerForHydration()) {
-            return $this->normalizer->denormalize($value, $propMetadata->getType(), 'json', $propMetadata->serializationContext());
-        }
-
-        if ($propMetadata->collectionValueType() && Type::BUILTIN_TYPE_OBJECT === $propMetadata->collectionValueType()->getBuiltinType()) {
-            $collectionClass = $propMetadata->collectionValueType()->getClassName();
-            foreach ($value as $key => $objectItem) {
-                $value[$key] = $this->hydrateObjectValue($objectItem, $collectionClass, true, $parentObject::class, sprintf('%s.%s', $propMetadata->getName(), $key), $parentObject);
-            }
-        }
-
-        // no type? no hydration
-        if (!$propMetadata->getType()) {
-            return $value;
-        }
-
-        if (null === $value) {
-            return null;
-        }
-
-        if (\is_string($value) && $propMetadata->isBuiltIn() && \in_array($propMetadata->getType(), ['int', 'float', 'bool'], true)) {
-            return self::coerceStringValue($value, $propMetadata->getType(), $propMetadata->allowsNull());
-        }
-
-        // for all other built-ins: int, boolean, array, return as is
-        if ($propMetadata->isBuiltIn()) {
-            return $value;
-        }
-
-        return $this->hydrateObjectValue($value, $propMetadata->getType(), $propMetadata->allowsNull(), $parentObject::class, $propMetadata->getName(), $parentObject);
     }
 
     private function hydrateObjectValue(mixed $value, string $className, bool $allowsNull, string $componentClassForError, string $propertyPathForError, object $component): ?object
