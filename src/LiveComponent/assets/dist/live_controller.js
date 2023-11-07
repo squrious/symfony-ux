@@ -2784,41 +2784,20 @@ class HistoryStrategy {
     }
 }
 
-class Tracker {
-    constructor(mapping, initialValue, initiallyPresentInUrl) {
-        this.mapping = mapping;
-        this.initialValue = JSON.stringify(initialValue);
-        this.initiallyPresentInUrl = initiallyPresentInUrl;
-    }
-    hasReturnedToInitialValue(currentValue) {
-        return JSON.stringify(currentValue) === this.initialValue;
-    }
-}
 class QueryStringPlugin {
     constructor(mapping) {
         this.mapping = mapping;
-        this.trackers = new Map;
     }
     attachToComponent(component) {
-        component.on('connect', (component) => {
-            const urlUtils = new UrlUtils(window.location.href);
-            Object.entries(this.mapping).forEach(([prop, mapping]) => {
-                const tracker = new Tracker(mapping, component.valueStore.get(prop), urlUtils.has(prop));
-                this.trackers.set(prop, tracker);
-            });
-        });
         component.on('render:finished', (component) => {
             const urlUtils = new UrlUtils(window.location.href);
-            this.trackers.forEach((tracker, prop) => {
-                const value = component.valueStore.get(prop);
-                if (!tracker.initiallyPresentInUrl && tracker.hasReturnedToInitialValue(value)) {
-                    urlUtils.remove(tracker.mapping.name);
-                }
-                else {
-                    urlUtils.set(tracker.mapping.name, value);
-                }
+            const currentUrl = urlUtils.toString();
+            Object.entries(this.mapping).forEach(([prop, mapping]) => {
+                urlUtils.set(mapping.name, component.valueStore.get(prop));
             });
-            HistoryStrategy.replace(urlUtils);
+            if (currentUrl !== urlUtils.toString()) {
+                HistoryStrategy.replace(urlUtils);
+            }
         });
     }
 }

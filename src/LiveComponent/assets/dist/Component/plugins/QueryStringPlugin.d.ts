@@ -5,7 +5,6 @@ interface QueryMapping {
 }
 export default class implements PluginInterface {
     private readonly mapping;
-    private trackers;
     constructor(mapping: {
         [p: string]: QueryMapping;
     });
