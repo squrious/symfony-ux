@@ -35,10 +35,22 @@ describe('url_utils', () => {
                 expect(urlUtils.search).toEqual('?param=bar');
             });
 
+            it('preserve empty values if the param is scalar', () => {
+                urlUtils.set('param', '');
+
+                expect(urlUtils.search).toEqual('?param=');
+            });
+
             it('expand arrays in the URL', () => {
                 urlUtils.set('param', ['foo', 'bar']);
 
                 expect(urlUtils.search).toEqual('?param[0]=foo&param[1]=bar');
+            });
+
+            it('prevent empty values if the param is array', () => {
+                urlUtils.set('param', []);
+
+                expect(urlUtils.search).toEqual('');
             });
 
             it('expand objects in the URL', () => {
@@ -48,6 +60,21 @@ describe('url_utils', () => {
                 });
 
                 expect(urlUtils.search).toEqual('?param[foo]=1&param[bar]=baz');
+            });
+
+            it('remove empty values in nested object properties', () => {
+                urlUtils.set('param', {
+                    foo: null,
+                    bar: 'baz',
+                });
+
+                expect(urlUtils.search).toEqual('?param[bar]=baz');
+            });
+
+            it('prevent empty values if the param is an empty object', () => {
+                urlUtils.set('param', {});
+
+                expect(urlUtils.search).toEqual('');
             });
         });
 

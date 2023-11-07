@@ -9,5 +9,6 @@ export default class implements PluginInterface {
         [p: string]: QueryMapping;
     });
     attachToComponent(component: Component): void;
+    private isEmpty;
 }
 export {};

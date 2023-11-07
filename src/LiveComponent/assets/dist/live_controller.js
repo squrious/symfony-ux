@@ -2704,10 +2704,13 @@ function toQueryString(data) {
         Object.entries(data).forEach(([iKey, iValue]) => {
             const key = baseKey === '' ? iKey : `${baseKey}[${iKey}]`;
             if (!isObject(iValue)) {
-                if (iValue !== null) {
+                if (null !== iValue) {
                     entries[key] = encodeURIComponent(iValue)
                         .replace(/%20/g, '+')
                         .replace(/%2C/g, ',');
+                }
+                else if ('' === baseKey) {
+                    entries[key] = '';
                 }
             }
             else {
@@ -2728,22 +2731,22 @@ function fromQueryString(search) {
     const insertDotNotatedValueIntoData = (key, value, data) => {
         const [first, second, ...rest] = key.split('.');
         if (!second)
-            return (data[key] = value);
+            return data[key] = value;
         if (data[first] === undefined) {
-            data[first] = Number.isNaN(second) ? {} : [];
+            data[first] = Number.isNaN(Number.parseInt(second)) ? {} : [];
         }
         insertDotNotatedValueIntoData([second, ...rest].join('.'), value, data[first]);
     };
     const entries = search.split('&').map((i) => i.split('='));
     const data = {};
     entries.forEach(([key, value]) => {
-        if (!value)
-            return;
         value = decodeURIComponent(value.replace(/\+/g, '%20'));
         if (!key.includes('[')) {
             data[key] = value;
         }
         else {
+            if ('' === value)
+                return;
             const dotNotatedKey = key.replace(/\[/g, '.').replace(/]/g, '');
             insertDotNotatedValueIntoData(dotNotatedKey, value, data);
         }
@@ -2793,12 +2796,32 @@ class QueryStringPlugin {
             const urlUtils = new UrlUtils(window.location.href);
             const currentUrl = urlUtils.toString();
             Object.entries(this.mapping).forEach(([prop, mapping]) => {
-                urlUtils.set(mapping.name, component.valueStore.get(prop));
+                const value = component.valueStore.get(prop);
+                if (this.isEmpty(value)) {
+                    urlUtils.remove(mapping.name);
+                }
+                else {
+                    urlUtils.set(mapping.name, value);
+                }
             });
             if (currentUrl !== urlUtils.toString()) {
                 HistoryStrategy.replace(urlUtils);
             }
         });
+    }
+    isEmpty(value) {
+        if (null === value || value === '' || value === undefined || Array.isArray(value) && value.length === 0) {
+            return true;
+        }
+        if (typeof value !== 'object') {
+            return false;
+        }
+        for (let key of Object.keys(value)) {
+            if (!this.isEmpty(value[key])) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 

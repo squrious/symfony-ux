@@ -18,7 +18,12 @@ export default class implements PluginInterface {
             const currentUrl = urlUtils.toString();
 
             Object.entries(this.mapping).forEach(([prop, mapping]) => {
-                urlUtils.set(mapping.name, component.valueStore.get(prop));
+                const value = component.valueStore.get(prop);
+                if (this.isEmpty(value)) {
+                    urlUtils.remove(mapping.name);
+                } else {
+                    urlUtils.set(mapping.name, value);
+                }
             });
 
             // Only update URL if it has changed
@@ -26,5 +31,23 @@ export default class implements PluginInterface {
                 HistoryStrategy.replace(urlUtils);
             }
         });
+    }
+
+    private isEmpty(value: any): boolean
+    {
+        if (null === value || value === '' || value === undefined || Array.isArray(value) && value.length === 0) {
+            return true;
+        }
+
+        if (typeof value !== 'object') {
+            return false;
+        }
+
+        for (let key of Object.keys(value)) {
+            if (!this.isEmpty(value[key])) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -15,10 +15,13 @@ function toQueryString(data: any) {
             const key = baseKey === '' ? iKey : `${baseKey}[${iKey}]`;
 
             if (!isObject(iValue)) {
-                if (iValue !== null) {
+                if (null !== iValue) {
                     entries[key] = encodeURIComponent(iValue)
                         .replace(/%20/g, '+') // Conform to RFC1738
                         .replace(/%2C/g, ',');
+                } else if ('' === baseKey) {
+                    // Keep empty values for top level data
+                    entries[key] = '';
                 }
             } else {
                 entries = { ...entries, ...buildQueryStringEntries(iValue, entries, key) };
@@ -51,11 +54,11 @@ function fromQueryString(search: string) {
         const [first, second, ...rest] = key.split('.');
 
         // We're at a leaf node, let's make the assigment...
-        if (!second) return (data[key] = value);
+        if (!second) return data[key] = value;
 
         // This is where we fill in empty arrays/objects along the way to the assigment...
         if (data[first] === undefined) {
-            data[first] = Number.isNaN(second) ? {} : [];
+            data[first] = Number.isNaN(Number.parseInt(second)) ? {} : [];
         }
 
         // Keep deferring assignment until the full key is built up...
@@ -67,14 +70,14 @@ function fromQueryString(search: string) {
     const data: any = {};
 
     entries.forEach(([key, value]) => {
-        // Query string params don't always have values... (`?foo=`)
-        if (!value) return;
-
         value = decodeURIComponent(value.replace(/\+/g, '%20'));
 
         if (!key.includes('[')) {
             data[key] = value;
         } else {
+            // Skip empty nested data
+            if ('' === value) return;
+
             // Convert to dot notation because it's easier...
             const dotNotatedKey = key.replace(/\[/g, '.').replace(/]/g, '');
 
