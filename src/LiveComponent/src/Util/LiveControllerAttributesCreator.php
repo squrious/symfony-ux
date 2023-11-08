@@ -126,11 +126,7 @@ class LiveControllerAttributesCreator
             $queryMapping = [];
             foreach ($liveMetadata->getAllLivePropsMetadata() as $livePropMetadata) {
                 if ($mapping = $livePropMetadata->getQueryStringMapping()) {
-                    foreach ($mapping['parameters'] as $parameter => $config) {
-                        $queryMapping[$config['property']] = [
-                            'name' => $parameter,
-                        ];
-                    }
+                    $queryMapping[$livePropMetadata->getName()] = $mapping;
                 }
             }
             $attributesCollection->setQueryUrlMapping($queryMapping);

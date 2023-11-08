@@ -38,13 +38,12 @@ final class QueryStringPropsExtractor
         $data = [];
 
         foreach ($metadata->getAllLivePropsMetadata() as $livePropMetadata) {
-            $queryStringBinding = $livePropMetadata->getQueryStringMapping();
-            foreach ($queryStringBinding['parameters'] ?? [] as $parameterName => $paramConfig) {
-                if (null !== ($value = $query[$parameterName] ?? null)) {
+            if ($queryStringMapping = $livePropMetadata->getQueryStringMapping()) {
+                if (null !== ($value = $query[$queryStringMapping['name']] ?? null)) {
                     if (\is_array($value) && $this->isNumericIndexedArray($value)) {
                         ksort($value);
                     }
-                    $data[$paramConfig['property']] = $this->hydrator->hydrateValue($value, $livePropMetadata, $component);
+                    $data[$livePropMetadata->getName()] = $this->hydrator->hydrateValue($value, $livePropMetadata, $component);
                 }
             }
         }

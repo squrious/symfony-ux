@@ -27,11 +27,6 @@ use Symfony\UX\TwigComponent\Event\PreMountEvent;
  */
 class QueryStringInitializeSubscriber implements EventSubscriberInterface
 {
-    /**
-     * @var array<class-string,LiveComponentMetadata>
-     */
-    private array $registered = [];
-
     public function __construct(
         private readonly RequestStack $requestStack,
         private readonly LiveComponentMetadataFactory $metadataFactory,

@@ -128,14 +128,8 @@ class LiveComponentMetadataFactory
             return [];
         }
 
-        $queryStringMapping = [];
-
-        $queryStringMapping['parameters'] = [
-            $propertyName => [
-                'property' => $propertyName,
-            ],
+        return [
+            'name' => $propertyName,
         ];
-
-        return $queryStringMapping;
     }
 }
