@@ -95,7 +95,16 @@ class LiveComponentMetadataFactory
             $isTypeNullable = $type?->allowsNull() ?? true;
         }
 
-        $queryStringBinding = $this->createQueryStringMapping($propertyName, $liveProp);
+        if (true === $liveProp->url()) {
+            if ('' === $liveProp->urlAlias()) {
+                throw new \LogicException(sprintf('URL alias for property "%s" in "%s" cannot be empty.', $property->getName(), $property->getDeclaringClass()->getName()));
+            }
+            $queryStringMapping = [
+                'name' => $liveProp->urlAlias() ?? $propertyName,
+            ];
+        } else {
+            $queryStringMapping = [];
+        }
 
         return new LivePropMetadata(
             $property->getName(),
@@ -104,7 +113,7 @@ class LiveComponentMetadataFactory
             $isTypeBuiltIn,
             $isTypeNullable,
             $collectionValueType,
-            $queryStringBinding
+            $queryStringMapping
         );
     }
 
@@ -120,16 +129,5 @@ class LiveComponentMetadataFactory
         if ($parent = $class->getParentClass()) {
             yield from self::propertiesFor($parent);
         }
-    }
-
-    private function createQueryStringMapping(string $propertyName, LiveProp $liveProp): array
-    {
-        if (false === $liveProp->url()) {
-            return [];
-        }
-
-        return [
-            'name' => $propertyName,
-        ];
     }
 }

@@ -47,5 +47,9 @@ class LiveComponentMetadataFactoryTest extends KernelTestCase
         $this->assertEquals([
             'name' => 'prop5',
         ], $propsMetadataByName['prop5']->getQueryStringMapping());
+
+        $this->assertEquals([
+            'name' => 'q',
+        ], $propsMetadataByName['prop6']->getQueryStringMapping());
     }
 }

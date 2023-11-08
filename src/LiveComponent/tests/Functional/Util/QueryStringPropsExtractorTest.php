@@ -58,6 +58,7 @@ class QueryStringPropsExtractorTest extends KernelTestCase
                 return $address;
             })(),
             ]],
+            ['q=foo', ['prop6' => 'foo']],
         ];
     }
 }

@@ -59,11 +59,14 @@ final class LiveProp
     private null|string|array $onUpdated;
 
     /**
-     * @var bool
-     *
-     * Tells if this property should be bound to the URL
+     * Tells if this property should be bound to the URL.
      */
     private bool $url;
+
+    /**
+     *  Alias name for the URL parameter.
+     */
+    private ?string $urlAlias = null;
 
     /**
      * @param bool|array  $writable                  If true, this property can be changed by the frontend.
@@ -82,6 +85,7 @@ final class LiveProp
      *                                               to match the new value and the child will be re-rendered
      * @param bool        $url                       if true, this property will be synchronized with a query parameter
      *                                               in the URL
+     * @param string|null $urlAlias                  Use a custom parameter name in the URL
      */
     public function __construct(
         bool|array $writable = false,
@@ -94,6 +98,7 @@ final class LiveProp
         bool $updateFromParent = false,
         string|array $onUpdated = null,
         bool $url = false,
+        string $urlAlias = null,
     ) {
         $this->writable = $writable;
         $this->hydrateWith = $hydrateWith;
@@ -105,6 +110,7 @@ final class LiveProp
         $this->acceptUpdatesFromParent = $updateFromParent;
         $this->onUpdated = $onUpdated;
         $this->url = $url;
+        $this->urlAlias = $urlAlias;
 
         if ($this->useSerializerForHydration && ($this->hydrateWith || $this->dehydrateWith)) {
             throw new \InvalidArgumentException('Cannot use useSerializerForHydration with hydrateWith or dehydrateWith.');
@@ -203,5 +209,10 @@ final class LiveProp
     public function url(): bool
     {
         return $this->url;
+    }
+
+    public function urlAlias(): ?string
+    {
+        return $this->urlAlias;
     }
 }
