@@ -28,7 +28,7 @@ final class QueryStringPropsExtractor
     {
     }
 
-    public function extract(Request $request, LiveComponentMetadata $metadata, object $component): array
+    public function extract(Request $request, LiveComponentMetadata $metadata, object $component, string $prefix = ''): array
     {
         $query = $request->query->all();
 
@@ -39,7 +39,7 @@ final class QueryStringPropsExtractor
 
         foreach ($metadata->getAllLivePropsMetadata() as $livePropMetadata) {
             if ($queryStringMapping = $livePropMetadata->getQueryStringMapping()) {
-                if (null !== ($value = $query[$queryStringMapping['name']] ?? null)) {
+                if (null !== ($value = $query[$prefix.$queryStringMapping['name']] ?? null)) {
                     if (\is_array($value) && $this->isNumericIndexedArray($value)) {
                         ksort($value);
                     }

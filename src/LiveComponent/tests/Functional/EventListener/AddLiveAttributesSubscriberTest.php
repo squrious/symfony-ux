@@ -153,4 +153,35 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
 
         $this->assertEquals($expected, $queryMapping);
     }
+
+    public function testQueryStringMappingAttributeWithMultipleComponents()
+    {
+        $crawler = $this->browser()
+            ->visit('/render-template/render_multiple_components_with_url_bound_props')
+            ->assertSuccessful()
+            ->crawler()
+        ;
+        $component1 = $crawler->filter('div[id=component1]');
+        $this->assertEquals('c1_', $component1->attr('query-param-prefix'));
+        $queryMapping = json_decode($component1->attr('data-live-query-mapping-value'), true);
+        $expected = [
+            'prop1' => ['name' => 'c1_prop1'],
+            'prop2' => ['name' => 'c1_prop2'],
+            'prop3' => ['name' => 'c1_prop3'],
+            'prop5' => ['name' => 'c1_prop5'],
+        ];
+
+        $this->assertEquals($expected, $queryMapping);
+
+        $component2 = $crawler->filter('div[id=component2]');
+        $this->assertNull($component2->attr('query-param-prefix'));
+        $queryMapping = json_decode($component2->attr('data-live-query-mapping-value'), true);
+        $expected = [
+            'prop1' => ['name' => 'c2_prop1'],
+            'prop2' => ['name' => 'c2_prop2'],
+            'prop3' => ['name' => 'c2_prop3'],
+            'prop5' => ['name' => 'c2_prop5'],
+        ];
+        $this->assertEquals($expected, $queryMapping);
+    }
 }

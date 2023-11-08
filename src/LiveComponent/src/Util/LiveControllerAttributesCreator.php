@@ -39,6 +39,8 @@ class LiveControllerAttributesCreator
      */
     public const KEY_PROP_NAME = 'key';
 
+    public const URL_PREFIX_PROP_NAME = 'query-param-prefix';
+
     public function __construct(
         private LiveComponentMetadataFactory $metadataFactory,
         private LiveComponentHydrator $hydrator,
@@ -108,6 +110,28 @@ class LiveControllerAttributesCreator
             }
         }
 
+        $liveMetadata = $this->metadataFactory->getMetadata($mounted->getName());
+
+        if ($liveMetadata->hasQueryStringBindings()) {
+            $urlPrefix = $mountedAttributes->all()[self::URL_PREFIX_PROP_NAME]
+                ?? $mounted->getInputProps()[self::KEY_PROP_NAME]
+                ?? '';
+
+            $queryMapping = [];
+            foreach ($liveMetadata->getAllLivePropsMetadata() as $livePropMetadata) {
+                if ($mapping = $livePropMetadata->getQueryStringMapping()) {
+                    $mapping['name'] = $urlPrefix.$mapping['name'];
+                    $queryMapping[$livePropMetadata->getName()] = $mapping;
+                }
+            }
+            $attributesCollection->setQueryUrlMapping($queryMapping);
+
+            if ('' !== $urlPrefix) {
+                // So the prefix is also used when the component is re-rendered in live
+                $mountedAttributes = $mountedAttributes->defaults([self::URL_PREFIX_PROP_NAME => $urlPrefix]);
+            }
+        }
+
         $dehydratedProps = $this->dehydrateComponent(
             $mounted->getName(),
             $mounted->getComponent(),
@@ -119,17 +143,6 @@ class LiveControllerAttributesCreator
             $attributesCollection->setCsrf(
                 $this->csrfTokenManager->getToken(self::getCsrfTokeName($mounted->getName()))->getValue(),
             );
-        }
-
-        $liveMetadata = $this->metadataFactory->getMetadata($mounted->getName());
-        if ($liveMetadata->hasQueryStringBindings()) {
-            $queryMapping = [];
-            foreach ($liveMetadata->getAllLivePropsMetadata() as $livePropMetadata) {
-                if ($mapping = $livePropMetadata->getQueryStringMapping()) {
-                    $queryMapping[$livePropMetadata->getName()] = $mapping;
-                }
-            }
-            $attributesCollection->setQueryUrlMapping($queryMapping);
         }
 
         return $attributesCollection;

@@ -15,6 +15,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadata;
 use Symfony\UX\LiveComponent\Metadata\LiveComponentMetadataFactory;
+use Symfony\UX\LiveComponent\Util\LiveControllerAttributesCreator;
 use Symfony\UX\LiveComponent\Util\QueryStringPropsExtractor;
 use Symfony\UX\TwigComponent\Event\PreMountEvent;
 
@@ -58,7 +59,11 @@ class QueryStringInitializeSubscriber implements EventSubscriberInterface
 
         $request = $this->requestStack->getMainRequest();
 
-        $queryStringData = $this->queryStringPropsExtractor->extract($request, $metadata, $component);
+        $prefix = $data[LiveControllerAttributesCreator::URL_PREFIX_PROP_NAME]
+            ?? $data[LiveControllerAttributesCreator::KEY_PROP_NAME]
+            ?? '';
+
+        $queryStringData = $this->queryStringPropsExtractor->extract($request, $metadata, $component, $prefix);
 
         $event->setData(array_merge($data, $queryStringData));
     }
