@@ -99,8 +99,13 @@ class LiveComponentMetadataFactory
             if ('' === $liveProp->urlAlias()) {
                 throw new \LogicException(sprintf('URL alias for property "%s" in "%s" cannot be empty.', $property->getName(), $property->getDeclaringClass()->getName()));
             }
+            if ($liveProp->urlKeep() && (!$isTypeBuiltIn || 'array' === $infoType)) {
+                throw new \LogicException(sprintf('Using the "urlKeep" option is only allowed on scalar props (trying to use on property "%s" with type "%s" in "%s"', $property->getName(), $infoType, $property->getDeclaringClass()->getName()));
+            }
+
             $queryStringMapping = [
                 'name' => $liveProp->urlAlias() ?? $propertyName,
+                'keep' => $liveProp->urlKeep(),
             ];
         } else {
             $queryStringMapping = [];

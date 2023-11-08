@@ -186,4 +186,20 @@ describe('LiveController query string binding', () => {
 
         expectCurrentSearch().toEqual('');
     });
+
+    it('keep option initializes URL and keep value even if it is empty', async () => {
+        const test = await createTest({ prop1: 'foo', prop2: ''}, (data: any) => `
+            <div ${initComponent(data, { queryMapping: {prop1: {name: 'prop1', keep: true}, prop2: {name: 'prop2', keep: true} }})}></div>
+        `)
+
+        expectCurrentSearch().toEqual('?prop1=foo&prop2=');
+
+        // Remove value
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop1: ''});
+
+        await test.component.set('prop1', '', true);
+
+        expectCurrentSearch().toEqual('?prop1=&prop2=');
+    })
 })

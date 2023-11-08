@@ -51,6 +51,7 @@ export default class LiveControllerDefault extends Controller<HTMLElement> imple
     readonly queryMappingValue: {
         [p: string]: {
             name: string;
+            keep: boolean;
         };
     };
     private proxiedComponent;

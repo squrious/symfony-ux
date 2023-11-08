@@ -32,24 +32,34 @@ class LiveComponentMetadataFactoryTest extends KernelTestCase
 
         $this->assertEquals([
             'name' => 'prop1',
+            'keep' => false,
         ], $propsMetadataByName['prop1']->getQueryStringMapping());
 
         $this->assertEquals([
             'name' => 'prop2',
+            'keep' => false,
         ], $propsMetadataByName['prop2']->getQueryStringMapping());
 
         $this->assertEquals([
             'name' => 'prop3',
+            'keep' => false,
         ], $propsMetadataByName['prop3']->getQueryStringMapping());
 
         $this->assertEquals([], $propsMetadataByName['prop4']->getQueryStringMapping());
 
         $this->assertEquals([
             'name' => 'prop5',
+            'keep' => false,
         ], $propsMetadataByName['prop5']->getQueryStringMapping());
 
         $this->assertEquals([
             'name' => 'q',
+            'keep' => false,
         ], $propsMetadataByName['prop6']->getQueryStringMapping());
+
+        $this->assertEquals([
+            'name' => 'prop7',
+            'keep' => true,
+        ], $propsMetadataByName['prop7']->getQueryStringMapping());
     }
 }

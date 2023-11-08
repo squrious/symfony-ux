@@ -2790,14 +2790,31 @@ class HistoryStrategy {
 class QueryStringPlugin {
     constructor(mapping) {
         this.mapping = mapping;
+        const defaults = { keep: false };
+        Object.entries(mapping).forEach(([prop, mapping]) => {
+            this.mapping[prop] = Object.assign(Object.assign({}, defaults), mapping);
+        });
     }
     attachToComponent(component) {
+        component.on('connect', (component) => {
+            const urlUtils = new UrlUtils(window.location.href);
+            const currentUrl = urlUtils.toString();
+            Object.entries(this.mapping).forEach(([prop, mapping]) => {
+                const value = component.valueStore.get(prop);
+                if (mapping.keep && !urlUtils.has(mapping.name)) {
+                    urlUtils.set(mapping.name, value);
+                }
+            });
+            if (currentUrl !== urlUtils.toString()) {
+                HistoryStrategy.replace(urlUtils);
+            }
+        });
         component.on('render:finished', (component) => {
             const urlUtils = new UrlUtils(window.location.href);
             const currentUrl = urlUtils.toString();
             Object.entries(this.mapping).forEach(([prop, mapping]) => {
                 const value = component.valueStore.get(prop);
-                if (this.isEmpty(value)) {
+                if (!mapping.keep && this.isEmpty(value)) {
                     urlUtils.remove(mapping.name);
                 }
                 else {

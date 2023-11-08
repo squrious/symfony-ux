@@ -145,11 +145,12 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
 
         $queryMapping = json_decode($div->attr('data-live-query-mapping-value'), true);
         $expected = [
-            'prop1' => ['name' => 'prop1'],
-            'prop2' => ['name' => 'prop2'],
-            'prop3' => ['name' => 'prop3'],
-            'prop5' => ['name' => 'prop5'],
-            'prop6' => ['name' => 'q'],
+            'prop1' => ['name' => 'prop1', 'keep' => false],
+            'prop2' => ['name' => 'prop2', 'keep' => false],
+            'prop3' => ['name' => 'prop3', 'keep' => false],
+            'prop5' => ['name' => 'prop5', 'keep' => false],
+            'prop6' => ['name' => 'q', 'keep' => false],
+            'prop7' => ['name' => 'prop7', 'keep' => true],
         ];
 
         $this->assertEquals($expected, $queryMapping);
@@ -166,11 +167,12 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
         $this->assertEquals('c1_', $component1->attr('query-param-prefix'));
         $queryMapping = json_decode($component1->attr('data-live-query-mapping-value'), true);
         $expected = [
-            'prop1' => ['name' => 'c1_prop1'],
-            'prop2' => ['name' => 'c1_prop2'],
-            'prop3' => ['name' => 'c1_prop3'],
-            'prop5' => ['name' => 'c1_prop5'],
-            'prop6' => ['name' => 'c1_q'],
+            'prop1' => ['name' => 'c1_prop1', 'keep' => false],
+            'prop2' => ['name' => 'c1_prop2', 'keep' => false],
+            'prop3' => ['name' => 'c1_prop3', 'keep' => false],
+            'prop5' => ['name' => 'c1_prop5', 'keep' => false],
+            'prop6' => ['name' => 'c1_q', 'keep' => false],
+            'prop7' => ['name' => 'c1_prop7', 'keep' => true],
         ];
 
         $this->assertEquals($expected, $queryMapping);
@@ -179,11 +181,12 @@ final class AddLiveAttributesSubscriberTest extends KernelTestCase
         $this->assertNull($component2->attr('query-param-prefix'));
         $queryMapping = json_decode($component2->attr('data-live-query-mapping-value'), true);
         $expected = [
-            'prop1' => ['name' => 'c2_prop1'],
-            'prop2' => ['name' => 'c2_prop2'],
-            'prop3' => ['name' => 'c2_prop3'],
-            'prop5' => ['name' => 'c2_prop5'],
-            'prop6' => ['name' => 'c2_q'],
+            'prop1' => ['name' => 'c2_prop1', 'keep' => false],
+            'prop2' => ['name' => 'c2_prop2', 'keep' => false],
+            'prop3' => ['name' => 'c2_prop3', 'keep' => false],
+            'prop5' => ['name' => 'c2_prop5', 'keep' => false],
+            'prop6' => ['name' => 'c2_q', 'keep' => false],
+            'prop7' => ['name' => 'c2_prop7', 'keep' => true],
         ];
         $this->assertEquals($expected, $queryMapping);
     }
