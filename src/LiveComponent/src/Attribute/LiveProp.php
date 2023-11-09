@@ -73,6 +73,13 @@ final class LiveProp
      */
     private bool $urlKeep;
 
+
+    /**
+     * If true, updating the URL parameter will push a new history entry
+     * instead of rewriting the URL in place.
+     */
+    private bool $urlHistory;
+
     /**
      * @param bool|array  $writable                  If true, this property can be changed by the frontend.
      *                                               Or set to an array of paths within this object/array
@@ -93,6 +100,8 @@ final class LiveProp
      * @param string|null $urlAlias                  Use a custom parameter name in the URL
      * @param bool        $urlKeep                   if true, when url binding is enabled, the parameter will always be
      *                                               shown in the URL
+     * @param bool        $urlHistory                if true, when url binding is enabled, a new history entry will be
+     *                                               pushed on prop update
      */
     public function __construct(
         bool|array $writable = false,
@@ -107,6 +116,7 @@ final class LiveProp
         bool $url = false,
         string $urlAlias = null,
         bool $urlKeep = false,
+        bool $urlHistory = false,
     ) {
         $this->writable = $writable;
         $this->hydrateWith = $hydrateWith;
@@ -120,6 +130,7 @@ final class LiveProp
         $this->url = $url;
         $this->urlAlias = $urlAlias;
         $this->urlKeep = $urlKeep;
+        $this->urlHistory = $urlHistory;
 
         if ($this->useSerializerForHydration && ($this->hydrateWith || $this->dehydrateWith)) {
             throw new \InvalidArgumentException('Cannot use useSerializerForHydration with hydrateWith or dehydrateWith.');
@@ -228,5 +239,10 @@ final class LiveProp
     public function urlKeep(): bool
     {
         return $this->urlKeep;
+    }
+
+    public function urlHistory(): bool
+    {
+        return $this->urlHistory;
     }
 }

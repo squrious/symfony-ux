@@ -106,6 +106,7 @@ class LiveComponentMetadataFactory
             $queryStringMapping = [
                 'name' => $liveProp->urlAlias() ?? $propertyName,
                 'keep' => $liveProp->urlKeep(),
+                'history' => $liveProp->urlHistory(),
             ];
         } else {
             $queryStringMapping = [];

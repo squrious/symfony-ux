@@ -135,4 +135,8 @@ export class HistoryStrategy {
     static replace(url: URL) {
         history.replaceState(history.state, '', url);
     }
+
+    static push(url: URL) {
+        history.pushState(history.state, '', url);
+    }
 }

@@ -8,4 +8,5 @@ export declare class UrlUtils extends URL {
 }
 export declare class HistoryStrategy {
     static replace(url: URL): void;
+    static push(url: URL): void;
 }

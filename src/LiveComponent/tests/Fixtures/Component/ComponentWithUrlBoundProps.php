@@ -31,5 +31,8 @@ class ComponentWithUrlBoundProps
     #[LiveProp(writable: true, url: true, urlKeep: true)]
     public ?string $prop7 = null;
 
+    #[LiveProp(writable: true, url: true, urlHistory: true)]
+    public ?string $prop8 = null;
+
     use DefaultActionTrait;
 }

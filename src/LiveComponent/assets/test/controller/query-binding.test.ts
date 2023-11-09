@@ -18,21 +18,13 @@ describe('LiveController query string binding', () => {
         setCurrentSearch('');
     });
 
-    it('doesn\'t initialize URL if props are not defined', async () => {
-        await createTest({ prop: ''}, (data: any) => `
-            <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
+    it('doesn\'t initialize URL if keep is not enabled', async () => {
+        await createTest({ prop1: '', prop2: 'foo'}, (data: any) => `
+            <div ${initComponent(data, { queryMapping: {prop1: {name: 'prop1'}, prop2: {name: 'prop2'}}})}></div>
         `)
 
         expectCurrentSearch().toEqual('');
     })
-
-    it('doesn\'t initialize URL with defined props values', async () => {
-        await createTest({ prop: 'foo'}, (data: any) => `
-            <div ${initComponent(data, { queryMapping: {prop: {name: 'prop'}}})}></div>
-        `)
-
-        expectCurrentSearch().toEqual('');
-    });
 
     it('updates basic props in the URL', async () => {
         const test = await createTest({ prop1: '', prop2: null}, (data: any) => `
@@ -201,5 +193,36 @@ describe('LiveController query string binding', () => {
         await test.component.set('prop1', '', true);
 
         expectCurrentSearch().toEqual('?prop1=&prop2=');
-    })
-})
+    });
+
+    it('creates a new history entry when history option is enabled', async () => {
+        const test = await createTest({ prop1: 'foo', prop2: ''}, (data: any) => `
+            <div ${initComponent(data, { queryMapping: {prop1: {name: 'prop1'}, prop2: {name: 'prop2', history: true} }})}></div>
+        `)
+        setCurrentSearch('?prop1=foo')
+
+        // Changing prop2 should create a new history entry
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop2: 'bar'});
+
+        await test.component.set('prop2', 'bar', true);
+
+        expectCurrentSearch().toEqual('?prop1=foo&prop2=bar');
+
+        // Changing prop1 should update the URL in-place
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop1: 'baz'});
+
+        await test.component.set('prop1', 'baz', true);
+
+        expectCurrentSearch().toEqual('?prop1=baz&prop2=bar');
+
+        window.history.back();
+
+        test.expectsAjaxCall()
+            .expectUpdatedData({prop1: 'foo'});
+
+        await waitFor(() => expectCurrentSearch().toEqual('?prop1=foo'));
+
+    });
+});

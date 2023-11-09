@@ -2785,45 +2785,57 @@ class HistoryStrategy {
     static replace(url) {
         history.replaceState(history.state, '', url);
     }
+    static push(url) {
+        history.pushState(history.state, '', url);
+    }
 }
 
 class QueryStringPlugin {
     constructor(mapping) {
         this.mapping = mapping;
-        const defaults = { keep: false };
+        const defaults = { keep: false, history: false };
         Object.entries(mapping).forEach(([prop, mapping]) => {
             this.mapping[prop] = Object.assign(Object.assign({}, defaults), mapping);
         });
     }
     attachToComponent(component) {
+        if (Object.keys(this.mapping).length === 0) {
+            return;
+        }
         component.on('connect', (component) => {
+            const cleanPop = this.configurePopStateHandler(component);
+            component.on('disconnect', () => {
+                cleanPop();
+            });
             const urlUtils = new UrlUtils(window.location.href);
-            const currentUrl = urlUtils.toString();
             Object.entries(this.mapping).forEach(([prop, mapping]) => {
-                const value = component.valueStore.get(prop);
                 if (mapping.keep && !urlUtils.has(mapping.name)) {
-                    urlUtils.set(mapping.name, value);
+                    urlUtils.set(mapping.name, component.getData(prop));
                 }
             });
-            if (currentUrl !== urlUtils.toString()) {
-                HistoryStrategy.replace(urlUtils);
-            }
+            this.updateUrl(urlUtils);
         });
         component.on('render:finished', (component) => {
             const urlUtils = new UrlUtils(window.location.href);
-            const currentUrl = urlUtils.toString();
+            let shouldPush = false;
             Object.entries(this.mapping).forEach(([prop, mapping]) => {
-                const value = component.valueStore.get(prop);
+                const value = component.getData(prop);
+                let urlParamChanged = false;
                 if (!mapping.keep && this.isEmpty(value)) {
-                    urlUtils.remove(mapping.name);
+                    if (urlUtils.has(mapping.name)) {
+                        urlParamChanged = true;
+                        urlUtils.remove(mapping.name);
+                    }
                 }
                 else {
+                    if (!urlUtils.has(mapping.name) || urlUtils.has(mapping.name) && JSON.stringify(urlUtils.get(mapping.name)) !== JSON.stringify(value)) {
+                        urlParamChanged = true;
+                    }
                     urlUtils.set(mapping.name, value);
                 }
+                shouldPush || (shouldPush = mapping.history && urlParamChanged);
             });
-            if (currentUrl !== urlUtils.toString()) {
-                HistoryStrategy.replace(urlUtils);
-            }
+            this.updateUrl(urlUtils, shouldPush);
         });
     }
     isEmpty(value) {
@@ -2839,6 +2851,46 @@ class QueryStringPlugin {
             }
         }
         return true;
+    }
+    configurePopStateHandler(component) {
+        const handler = async (e) => {
+            const urlUtils = new UrlUtils(window.location.href);
+            Object.entries(this.mapping).forEach(([prop, mapping]) => {
+                if (urlUtils.has(mapping.name)) {
+                    const value = urlUtils.get(mapping.name);
+                    for (let [p, v] of this.expandQueryParameter(prop, value)) {
+                        component.valueStore.set(p, v);
+                    }
+                }
+                else {
+                    const value = component.valueStore.get(prop);
+                    for (let [p] of this.expandQueryParameter(prop, value)) {
+                        if (component.valueStore.has(p)) {
+                            component.valueStore.set(p, null);
+                        }
+                    }
+                }
+            });
+            await component.render();
+        };
+        window.addEventListener('popstate', handler);
+        return () => window.removeEventListener('popstate', handler);
+    }
+    updateUrl(url, push = false) {
+        if (window.location.href !== url.toString()) {
+            const strategy = push ? 'push' : 'replace';
+            HistoryStrategy[strategy](url);
+        }
+    }
+    *expandQueryParameter(propertyPath, value) {
+        if (null !== value && typeof value === 'object' && !Array.isArray(value)) {
+            for (const key in value) {
+                yield* this.expandQueryParameter(`${propertyPath}.${key}`, value[key]);
+            }
+        }
+        else {
+            yield [propertyPath, value];
+        }
     }
 }
 

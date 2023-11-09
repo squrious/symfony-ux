@@ -48,12 +48,7 @@ export default class LiveControllerDefault extends Controller<HTMLElement> imple
     readonly hasDebounceValue: boolean;
     readonly debounceValue: number;
     readonly fingerprintValue: string;
-    readonly queryMappingValue: {
-        [p: string]: {
-            name: string;
-            keep: boolean;
-        };
-    };
+    readonly queryMappingValue: any;
     private proxiedComponent;
     component: Component;
     pendingActionTriggerModelElement: HTMLElement | null;
